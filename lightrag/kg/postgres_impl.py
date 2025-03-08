@@ -195,11 +195,11 @@ class ClientManager:
     def get_config() -> dict[str, Any]:
         config = configparser.ConfigParser()
         config.read("config.ini", "utf-8")
-
+    
         return {
             "host": os.environ.get(
                 "POSTGRES_HOST",
-                config.get("postgres", "host", fallback="localhost"),
+                config.get("postgres", "host", fallback="postgres"),
             ),
             "port": os.environ.get(
                 "POSTGRES_PORT", config.get("postgres", "port", fallback=5432)
@@ -212,7 +212,7 @@ class ClientManager:
                 config.get("postgres", "password", fallback=None),
             ),
             "database": os.environ.get(
-                "POSTGRES_DATABASE",
+                "POSTGRES_DB",
                 config.get("postgres", "database", fallback=None),
             ),
             "workspace": os.environ.get(
