@@ -1,6 +1,10 @@
 FROM postgres:16
 
 # Install essential dependencies
+# Use the PostgreSQL 16 package from the official repository
+# Install the PostgreSQL vector extension
+# Install the Apache AGE extension dependencies
+# Clone and build the Apache AGE extension
 RUN apt-get update && apt-get install -y \
     build-essential \
     libreadline-dev \

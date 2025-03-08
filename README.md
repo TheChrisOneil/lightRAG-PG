@@ -1,4 +1,4 @@
-<center><h2>🚀 LightRAG: Simple and Fast Retrieval-Augmented Generation</h2></center>
+<center><h2>🚀 LightRAG: Simple and Fast Retrieval-Augmented Generation Configured for postgress</h2></center>
 <div align="center">
 <table border="0" width="100%">
 <tr>
@@ -29,38 +29,15 @@
 </table>
 
 <div align="center">
-This repository hosts the code of LightRAG. The structure of this code is based on <a href="https://github.com/gusye1234/nano-graphrag">nano-graphrag</a>.
+This repository hosts the code of LightRAG configured for postgres. The graph database is based on <a href="https://github.com/apache/age">apache age</a>.
 
+The concepts utilize the LighRAG indexing of conversations and retrival of knowledge about conversations.
 <img src="https://i-blog.csdnimg.cn/direct/b2aaf634151b4706892693ffb43d9093.png" width="800" alt="LightRAG Diagram">
 </div>
 </div>
 </br>
 
 
-<details>
-  <summary style="font-size: 1.4em; font-weight: bold; cursor: pointer; display: list-item;">
-    🎉 News
-  </summary>
-
-
-- [x] [2025.02.05]🎯📢Our team has released [VideoRAG](https://github.com/HKUDS/VideoRAG) understanding extremely long-context videos.
-- [x] [2025.01.13]🎯📢Our team has released [MiniRAG](https://github.com/HKUDS/MiniRAG) making RAG simpler with small models.
-- [x] [2025.01.06]🎯📢You can now [use PostgreSQL for Storage](#using-postgresql-for-storage).
-- [x] [2024.12.31]🎯📢LightRAG now supports [deletion by document ID](https://github.com/HKUDS/LightRAG?tab=readme-ov-file#delete).
-- [x] [2024.11.25]🎯📢LightRAG now supports seamless integration of [custom knowledge graphs](https://github.com/HKUDS/LightRAG?tab=readme-ov-file#insert-custom-kg), empowering users to enhance the system with their own domain expertise.
-- [x] [2024.11.19]🎯📢A comprehensive guide to LightRAG is now available on [LearnOpenCV](https://learnopencv.com/lightrag). Many thanks to the blog author.
-- [x] [2024.11.12]🎯📢LightRAG now supports [Oracle Database 23ai for all storage types (KV, vector, and graph)](https://github.com/HKUDS/LightRAG/blob/main/examples/lightrag_oracle_demo.py).
-- [x] [2024.11.11]🎯📢LightRAG now supports [deleting entities by their names](https://github.com/HKUDS/LightRAG?tab=readme-ov-file#delete).
-- [x] [2024.11.09]🎯📢Introducing the [LightRAG Gui](https://lightrag-gui.streamlit.app), which allows you to insert, query, visualize, and download LightRAG knowledge.
-- [x] [2024.11.04]🎯📢You can now [use Neo4J for Storage](https://github.com/HKUDS/LightRAG?tab=readme-ov-file#using-neo4j-for-storage).
-- [x] [2024.10.29]🎯📢LightRAG now supports multiple file types, including PDF, DOC, PPT, and CSV via `textract`.
-- [x] [2024.10.20]🎯📢We've added a new feature to LightRAG: Graph Visualization.
-- [x] [2024.10.18]🎯📢We've added a link to a [LightRAG Introduction Video](https://youtu.be/oageL-1I0GE). Thanks to the author!
-- [x] [2024.10.17]🎯📢We have created a [Discord channel](https://discord.gg/yF2MmDJyGJ)! Welcome to join for sharing and discussions! 🎉🎉
-- [x] [2024.10.16]🎯📢LightRAG now supports [Ollama models](https://github.com/HKUDS/LightRAG?tab=readme-ov-file#quick-start)!
-- [x] [2024.10.15]🎯📢LightRAG now supports [Hugging Face models](https://github.com/HKUDS/LightRAG?tab=readme-ov-file#quick-start)!
-
-</details>
 
 <details>
   <summary style="font-size: 1.4em; font-weight: bold; cursor: pointer; display: list-item;">
@@ -76,25 +53,19 @@ This repository hosts the code of LightRAG. The structure of this code is based 
 
 ## Install
 
-* Install from source (Recommend)
+* Install from repo
 
 ```bash
-cd LightRAG
-pip install -e .
+clone repo
+run docker-compose
+launch http://localhost:9621/webui/
 ```
-* Install from PyPI
-```bash
-pip install lightrag-hku
-```
+* This installation used the original source code from the LightRAG repo and executed the installation scripts; A process that essentially takes the lightrag_webui and complies and distributes it to the lightrag/api/web_ui.
 
-## Quick Start
-* [Video demo](https://www.youtube.com/watch?v=g21royNJ4fw) of running LightRAG locally.
-* All the code can be found in the `examples`.
-* Set OpenAI API key in environment if using OpenAI models: `export OPENAI_API_KEY="sk-...".`
-* Download the demo text "A Christmas Carol by Charles Dickens":
-```bash
-curl https://raw.githubusercontent.com/gusye1234/nano-graphrag/main/tests/mock_data.txt > ./book.txt
-```
+This installation is setup to use postgress.  This installation no longer supports the any other configuration.  Note there may still be remements of that code in this repo but it will be removed.
+
+## Usage
+Access the system via the api.
 
 ## Query
 
