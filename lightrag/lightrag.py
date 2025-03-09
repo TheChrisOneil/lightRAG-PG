@@ -4,11 +4,11 @@ import asyncio
 import configparser
 import os
 import warnings
+import json
 from dataclasses import asdict, dataclass, field
 from datetime import datetime
 from functools import partial
-from typing import Any, AsyncIterator, Callable, Iterator, cast, final
-
+from typing import Any, AsyncIterator, Callable, Iterator, cast, final, Optional
 from lightrag.kg import (
     STORAGE_ENV_REQUIREMENTS,
     STORAGES,
@@ -1152,7 +1152,9 @@ class LightRAG:
         finally:
             if update_storage:
                 await self._insert_done()
-
+    # ---------------------
+    # Query
+    # ---------------------
     def query(
         self,
         query: str,
@@ -1374,6 +1376,72 @@ class LightRAG:
     async def _query_done(self):
         await self.llm_response_cache.index_done_callback()
 
+    # ---------------------
+    #  Coach Reply
+    # ---------------------
+  
+    async def acoach_reply(
+        self,
+        conversation_history: list[dict], system_prompt: Optional[str] = None
+    ) -> str | AsyncIterator[str]:
+        """
+        Generate a reply as a supportive life coach based on the last user message.
+
+        Args:
+            conversation_history (list[dict]): The conversation history.
+            system_prompt (Optional[str]): Custom prompt for fine-tuned response.
+
+        Returns:
+            str | AsyncIterator[str]: The AI-generated response.
+        """
+        # Ensure conversation history exists
+        # TODO use a kg_query to generate a response
+        if not conversation_history or not isinstance(conversation_history, list):
+            return "I’d love to chat! What’s on your mind today? 😊"
+
+        # Extract the last user message
+        last_message = None
+        for msg in reversed(conversation_history):
+            if msg.get("role") == "user":
+                last_message = msg.get("content")
+                break
+        # TODO use a kg_query to generate a response
+        if not last_message:
+            return "I’d love to hear more from you! How has your day been?"
+
+        # Construct the prompt for LLM
+        reply_prompt = PROMPTS["coach_reply"].format(
+            history=json.dumps(conversation_history, indent=2),
+            last_message=last_message,
+        )
+
+        # Call LLM to generate response (assuming `llm_model_func` is available)
+        response = await self.llm_model_func(reply_prompt)
+
+        return response
+
+
+    def coach_reply(
+        self,
+        conversation_history: list[dict], system_prompt: Optional[str] = None
+    ) -> str:
+        """
+        Synchronous version of areply.
+
+        Args:
+            conversation_history (list[dict]): The conversation history.
+            system_prompt (Optional[str]): Custom prompt for fine-tuned response.
+
+        Returns:
+            str: The AI-generated response.
+        """
+        loop = always_get_an_event_loop()
+        return loop.run_until_complete(self.acoach_reply(conversation_history, system_prompt))
+
+
+    # ---------------------
+    #  Delete
+    # ---------------------
     def delete_by_entity(self, entity_name: str) -> None:
         loop = always_get_an_event_loop()
         return loop.run_until_complete(self.adelete_by_entity(entity_name))
