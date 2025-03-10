@@ -267,6 +267,7 @@ class LightRAG:
     _storages_status: StoragesStatus = field(default=StoragesStatus.NOT_CREATED)
 
     def __post_init__(self):
+        self.namespace_prefix = NameSpace.sanitize_namespace_prefix(self.namespace_prefix)
         from lightrag.kg.shared_storage import (
             initialize_share_data,
         )
@@ -319,6 +320,7 @@ class LightRAG:
 
         # Show config
         global_config = asdict(self)
+        global_config["namespace_prefix"] = self.namespace_prefix
         _print_config = ",\n  ".join([f"{k} = {v}" for k, v in global_config.items()])
         logger.debug(f"LightRAG init with param:\n  {_print_config}\n")
 
@@ -328,6 +330,8 @@ class LightRAG:
         )
 
         # Initialize all storages
+        # logger the namespace prefix
+        logger.debug(f"Initializing storage with namespace prefix: {self.namespace_prefix}")
         self.key_string_value_json_storage_cls: type[BaseKVStorage] = (
             self._get_storage_class(self.kv_storage)
         )  # type: ignore

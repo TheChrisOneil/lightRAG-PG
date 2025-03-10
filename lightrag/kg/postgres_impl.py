@@ -1,9 +1,10 @@
 import asyncio
 import json
 import os
+import re
 import time
 from dataclasses import dataclass, field
-from typing import Any, Union, final
+from typing import Any, Union, Optional, final
 import numpy as np
 import configparser
 
@@ -78,6 +79,16 @@ class PostgreSQLDB:
             )
             raise
 
+
+    @staticmethod
+    def sanitize_namespace_prefix(name: str) -> str:
+        # Replace all non-alphanumeric characters with underscore
+        name = re.sub(r'\W+', '_', name)
+        # Ensure it doesn't start with a digit (PostgreSQL restriction)
+        if name and name[0].isdigit():
+            name = f"g_{name}"
+        return name
+
     @staticmethod
     async def configure_age(connection: asyncpg.Connection, graph_name: str) -> None:
         """Set the Apache AGE environment and creates a graph if it does not exist.
@@ -89,11 +100,12 @@ class PostgreSQLDB:
 
         """
         try:
+            sanitized_name = PostgreSQLDB.sanitize_namespace_prefix(graph_name)
             await connection.execute(  # type: ignore
                 'SET search_path = ag_catalog, "$user", public'
             )
             await connection.execute(  # type: ignore
-                f"select create_graph('{graph_name}')"
+                f"select create_graph('{sanitized_name}')"
             )
         except (
             asyncpg.exceptions.InvalidSchemaNameError,
@@ -101,6 +113,7 @@ class PostgreSQLDB:
         ):
             pass
 
+    
     async def check_tables(self):
         for k, v in TABLES.items():
             try:
@@ -191,41 +204,42 @@ class ClientManager:
     _instances: dict[str, Any] = {"db": None, "ref_count": 0}
     _lock = asyncio.Lock()
 
-    @staticmethod
-    def get_config() -> dict[str, Any]:
+    @classmethod
+    def get_config(cls, namespace_prefix: Optional[str] = None, global_config: Optional[dict[str, Any]] = None) -> dict[str, Any]:
         config = configparser.ConfigParser()
         config.read("config.ini", "utf-8")
-    
+
+        if global_config is None:
+            global_config = {}
+
         return {
-            "host": os.environ.get(
-                "POSTGRES_HOST",
-                config.get("postgres", "host", fallback="postgres"),
+            "host": global_config.get("host") or os.environ.get(
+                "POSTGRES_HOST", config.get("postgres", "host", fallback="postgres")
             ),
-            "port": os.environ.get(
+            "port": global_config.get("port") or os.environ.get(
                 "POSTGRES_PORT", config.get("postgres", "port", fallback=5432)
             ),
-            "user": os.environ.get(
+            "user": global_config.get("user") or os.environ.get(
                 "POSTGRES_USER", config.get("postgres", "user", fallback=None)
             ),
-            "password": os.environ.get(
-                "POSTGRES_PASSWORD",
-                config.get("postgres", "password", fallback=None),
+            "password": global_config.get("password") or os.environ.get(
+                "POSTGRES_PASSWORD", config.get("postgres", "password", fallback=None)
             ),
-            "database": os.environ.get(
-                "POSTGRES_DB",
-                config.get("postgres", "database", fallback=None),
+            "database": global_config.get("database") or os.environ.get(
+                "POSTGRES_DB", config.get("postgres", "database", fallback=None)
             ),
-            "workspace": os.environ.get(
-                "POSTGRES_WORKSPACE",
-                config.get("postgres", "workspace", fallback="default"),
+            "workspace": PostgreSQLDB.sanitize_namespace_prefix(
+                namespace_prefix or global_config.get("workspace") or os.environ.get(
+                    "POSTGRES_WORKSPACE", config.get("postgres", "workspace", fallback="default")
+                )
             ),
         }
 
     @classmethod
-    async def get_client(cls) -> PostgreSQLDB:
+    async def get_client(cls, namespace_prefix: Optional[str] = None) -> PostgreSQLDB:
         async with cls._lock:
             if cls._instances["db"] is None:
-                config = ClientManager.get_config()
+                config = ClientManager.get_config(namespace_prefix=namespace_prefix)
                 db = PostgreSQLDB(config)
                 await db.initdb()
                 await db.check_tables()
@@ -260,7 +274,8 @@ class PGKVStorage(BaseKVStorage):
 
     async def initialize(self):
         if self.db is None:
-            self.db = await ClientManager.get_client()
+            namespace_prefix = self.global_config.get("namespace_prefix")
+            self.db = await ClientManager.get_client(namespace_prefix=namespace_prefix)
 
     async def finalize(self):
         if self.db is not None:
@@ -405,7 +420,8 @@ class PGVectorStorage(BaseVectorStorage):
 
     async def initialize(self):
         if self.db is None:
-            self.db = await ClientManager.get_client()
+            namespace_prefix = self.global_config.get("namespace_prefix")
+            self.db = await ClientManager.get_client(namespace_prefix=namespace_prefix)
 
     async def finalize(self):
         if self.db is not None:
@@ -741,7 +757,7 @@ class PGGraphStorage(BaseGraphStorage):
 
     async def initialize(self):
         if self.db is None:
-            self.db = await ClientManager.get_client()
+            self.db = await ClientManager.get_client(namespace_prefix=None)
 
     async def finalize(self):
         if self.db is not None:

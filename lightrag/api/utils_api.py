@@ -9,7 +9,7 @@ import sys
 import logging
 from ascii_colors import ASCIIColors
 from lightrag.api import __api_version__
-from fastapi import HTTPException, Security
+from fastapi import HTTPException, Security, Header, Query, Request
 from dotenv import load_dotenv
 from fastapi.security import APIKeyHeader
 from starlette.status import HTTP_403_FORBIDDEN
@@ -66,6 +66,38 @@ def get_api_key_dependency(api_key: Optional[str]):
         return api_key_header_value
 
     return api_key_auth
+
+def get_resolved_namespace(
+    namespace: Optional[str] = Query(default=None),
+    x_namespace: Optional[str] = Header(default=None, alias="X-Namespace"),
+) -> Optional[str]:
+    """
+    Dependency to resolve the effective namespace, checking both query param and header.
+    Priority: ?namespace= takes precedence over X-Namespace header.
+    """
+    return namespace or x_namespace
+
+from fastapi import FastAPI
+from lightrag.lightrag import LightRAG  # Adjust the import path if LightRAG is defined elsewhere
+
+async def get_rag_from_app(request: Request, namespace: Optional[str] = None) -> LightRAG:
+    """
+    Retrieve a LightRAG instance from FastAPI app state using a factory method.
+ 
+    Args:
+        request (Request): The FastAPI request object.
+        namespace (Optional[str]): Optional namespace for multi-tenant instantiation.
+ 
+    Returns:
+        LightRAG: An initialized LightRAG instance.
+    """
+    if not hasattr(request.app.state, "rag_factory"):
+        raise RuntimeError("rag_factory not found in app.state. Make sure it is set in create_app.")
+ 
+    resolved_namespace = namespace or "default"
+    rag_instance = await request.app.state.rag_factory(namespace_prefix=resolved_namespace)
+    ASCIIColors.green("\nServer is ready to accept connections! 🚀\n")
+    return rag_instance
 
 
 class DefaultRAGStorageConfig:
@@ -514,3 +546,15 @@ def display_splash_screen(args: argparse.Namespace) -> None:
 
     # Ensure splash output flush to system log
     sys.stdout.flush()
+
+
+
+def get_resolved_namespace(
+    namespace: Optional[str] = Query(default=None),
+    x_namespace: Optional[str] = Header(default=None, alias="X-Namespace"),
+) -> Optional[str]:
+    """
+    Dependency to resolve the effective namespace, checking both query param and header.
+    Priority: ?namespace= takes precedence over X-Namespace header.
+    """
+    return namespace or x_namespace

@@ -16,9 +16,18 @@ class NameSpace:
 
     DOC_STATUS = "doc_status"
 
+    @staticmethod
+    def sanitize_namespace_prefix(prefix: str) -> str:
+        """
+        Sanitize the namespace prefix to ensure it is safe for use in file systems and database identifiers.
+        Replaces unsafe characters such as |, /, \\, etc.
+        """
+        return prefix.replace("|", "_").replace("/", "_").replace("\\", "_").strip()
+
 
 def make_namespace(prefix: str, base_namespace: str):
-    return prefix + base_namespace
+    sanitized_prefix = NameSpace.sanitize_namespace_prefix(prefix)
+    return sanitized_prefix + base_namespace
 
 
 def is_namespace(namespace: str, base_namespace: str | Iterable[str]):

@@ -8,6 +8,7 @@ from fastapi import (
 )
 import asyncio
 import os
+import re
 import logging
 import logging.config
 import uvicorn
@@ -132,41 +133,61 @@ def create_app(args):
     # Initialize document manager
     doc_manager = DocumentManager(args.input_dir)
 
+    # @asynccontextmanager
+    # async def lifespan(app: FastAPI):
+    #     """Lifespan context manager for startup and shutdown events"""
+    #     # Store background tasks
+    #     app.state.background_tasks = set()
+
+    #     try:
+    #         # Initialize database connections
+    #         # Initialization of storages is now handled per namespace
+    #         await initialize_pipeline_status()
+
+    #         # Auto scan documents if enabled
+    #         if args.auto_scan_at_startup:
+    #             # Check if a task is already running (with lock protection)
+    #             pipeline_status = await get_namespace_data("pipeline_status")
+    #             should_start_task = False
+    #             async with get_pipeline_status_lock():
+    #                 if not pipeline_status.get("busy", False):
+    #                     should_start_task = True
+    #             # Only start the task if no other task is running
+    #             if should_start_task:
+    #                 # Create background task
+    #                 task = asyncio.create_task(run_scanning_process(app.state.rag_factory(), doc_manager))
+    #                 app.state.background_tasks.add(task)
+    #                 task.add_done_callback(app.state.background_tasks.discard)
+    #                 logger.info("Auto scan task started at startup.")
+
+    #         ASCIIColors.green("\nServer is ready to accept connections! 🚀\n")
+
+    #         yield
+
+    #     finally:
+    #         # Clean up database connections
+    #         await rag.finalize_storages()
+
+    from contextlib import asynccontextmanager
+
     @asynccontextmanager
     async def lifespan(app: FastAPI):
         """Lifespan context manager for startup and shutdown events"""
-        # Store background tasks
+
+        # Startup
         app.state.background_tasks = set()
+        ASCIIColors.green("\nServer is ready to accept connections! 🚀\n")
+        yield
 
-        try:
-            # Initialize database connections
-            await rag.initialize_storages()
-            await initialize_pipeline_status()
-
-            # Auto scan documents if enabled
-            if args.auto_scan_at_startup:
-                # Check if a task is already running (with lock protection)
-                pipeline_status = await get_namespace_data("pipeline_status")
-                should_start_task = False
-                async with get_pipeline_status_lock():
-                    if not pipeline_status.get("busy", False):
-                        should_start_task = True
-                # Only start the task if no other task is running
-                if should_start_task:
-                    # Create background task
-                    task = asyncio.create_task(run_scanning_process(rag, doc_manager))
-                    app.state.background_tasks.add(task)
-                    task.add_done_callback(app.state.background_tasks.discard)
-                    logger.info("Auto scan task started at startup.")
-
-            ASCIIColors.green("\nServer is ready to accept connections! 🚀\n")
-
-            yield
-
-        finally:
-            # Clean up database connections
-            await rag.finalize_storages()
-
+        # Shutdown
+        if hasattr(app.state, "rag_instances"):
+            for namespace, rag in app.state.rag_instances.items():
+                try:
+                    await rag.finalize_storages()
+                    logger.info(f"Finalized storages for namespace: {namespace}")
+                except Exception as e:
+                    logger.error(f"Error finalizing storages for {namespace}: {e}")
+    
     # Initialize FastAPI
     app = FastAPI(
         title="LightRAG API",
@@ -292,85 +313,97 @@ def create_app(args):
             api_key=args.embedding_binding_api_key,
         ),
     )
+    def sanitize_namespace_prefix(name: str) -> str:
+        # Replace all non-alphanumeric characters with underscore
+        name = re.sub(r'\W+', '_', name)
+        # Ensure it doesn't start with a digit (PostgreSQL restriction)
+        if name and name[0].isdigit():
+            name = f"g_{name}"
+        return name
+    # Set up RAG factory instead of instantiating LightRAG directly
+    app.state.rag_factory_sync = lambda namespace_prefix="default": LightRAG(
+        working_dir=args.working_dir,
+        llm_model_func=lollms_model_complete
+        if args.llm_binding == "lollms"
+        else ollama_model_complete
+        if args.llm_binding == "ollama"
+        else openai_alike_model_complete
+        if args.llm_binding in ["openai", "openai-ollama"]
+        else azure_openai_model_complete,
+        llm_model_name=args.llm_model,
+        llm_model_max_async=args.max_async,
+        llm_model_max_token_size=args.max_tokens,
+        chunk_token_size=int(args.chunk_size),
+        chunk_overlap_token_size=int(args.chunk_overlap_size),
+        llm_model_kwargs={
+            "host": args.llm_binding_host,
+            "timeout": args.timeout,
+            "options": {"num_ctx": args.max_tokens},
+            "api_key": args.llm_binding_api_key,
+        }
+        if args.llm_binding in ["lollms", "ollama"]
+        else {},
+        embedding_func=embedding_func,
+        kv_storage=args.kv_storage,
+        graph_storage=args.graph_storage,
+        vector_storage=args.vector_storage,
+        doc_status_storage=args.doc_status_storage,
+        vector_db_storage_cls_kwargs={
+            "cosine_better_than_threshold": args.cosine_threshold
+        },
+        enable_llm_cache_for_entity_extract=False,
+        embedding_cache_config={
+            "enabled": True,
+            "similarity_threshold": 0.95,
+            "use_llm_check": False,
+        },
+        namespace_prefix=sanitize_namespace_prefix(namespace_prefix),
+        auto_manage_storages_states=False,
+        
+    )
+    
+    # Async version includes initialization and eviction logic
+    async def async_rag_factory(namespace_prefix="default") -> LightRAG:
+        MAX_RAG_INSTANCES = int(os.getenv("MAX_RAG_INSTANCES", 100))
+        if not hasattr(app.state, "rag_instances"):
+            app.state.rag_instances = {}
+        if not hasattr(app.state, "rag_instance_order"):
+            app.state.rag_instance_order = []
 
-    # Initialize RAG
-    if args.llm_binding in ["lollms", "ollama", "openai"]:
-        rag = LightRAG(
-            working_dir=args.working_dir,
-            llm_model_func=lollms_model_complete
-            if args.llm_binding == "lollms"
-            else ollama_model_complete
-            if args.llm_binding == "ollama"
-            else openai_alike_model_complete,
-            llm_model_name=args.llm_model,
-            llm_model_max_async=args.max_async,
-            llm_model_max_token_size=args.max_tokens,
-            chunk_token_size=int(args.chunk_size),
-            chunk_overlap_token_size=int(args.chunk_overlap_size),
-            llm_model_kwargs={
-                "host": args.llm_binding_host,
-                "timeout": args.timeout,
-                "options": {"num_ctx": args.max_tokens},
-                "api_key": args.llm_binding_api_key,
-            }
-            if args.llm_binding == "lollms" or args.llm_binding == "ollama"
-            else {},
-            embedding_func=embedding_func,
-            kv_storage=args.kv_storage,
-            graph_storage=args.graph_storage,
-            vector_storage=args.vector_storage,
-            doc_status_storage=args.doc_status_storage,
-            vector_db_storage_cls_kwargs={
-                "cosine_better_than_threshold": args.cosine_threshold
-            },
-            enable_llm_cache_for_entity_extract=False,  # set to True for debuging to reduce llm fee
-            embedding_cache_config={
-                "enabled": True,
-                "similarity_threshold": 0.95,
-                "use_llm_check": False,
-            },
-            namespace_prefix=args.namespace_prefix,
-            auto_manage_storages_states=False,
-        )
-    else:  # azure_openai
-        rag = LightRAG(
-            working_dir=args.working_dir,
-            llm_model_func=azure_openai_model_complete,
-            chunk_token_size=int(args.chunk_size),
-            chunk_overlap_token_size=int(args.chunk_overlap_size),
-            llm_model_kwargs={
-                "timeout": args.timeout,
-            },
-            llm_model_name=args.llm_model,
-            llm_model_max_async=args.max_async,
-            llm_model_max_token_size=args.max_tokens,
-            embedding_func=embedding_func,
-            kv_storage=args.kv_storage,
-            graph_storage=args.graph_storage,
-            vector_storage=args.vector_storage,
-            doc_status_storage=args.doc_status_storage,
-            vector_db_storage_cls_kwargs={
-                "cosine_better_than_threshold": args.cosine_threshold
-            },
-            enable_llm_cache_for_entity_extract=False,  # set to True for debuging to reduce llm fee
-            embedding_cache_config={
-                "enabled": True,
-                "similarity_threshold": 0.95,
-                "use_llm_check": False,
-            },
-            namespace_prefix=args.namespace_prefix,
-            auto_manage_storages_states=False,
-        )
+        if namespace_prefix in app.state.rag_instances:
+            return app.state.rag_instances[namespace_prefix]
 
+        # Create new instance
+        rag = app.state.rag_factory_sync(namespace_prefix=namespace_prefix)
+        await rag.initialize_storages()
+        await initialize_pipeline_status()
+        logger.info(f"Creating RAG instance for namespace: {namespace_prefix}")
+        # Enforce eviction if limit exceeded
+        if len(app.state.rag_instance_order) >= MAX_RAG_INSTANCES:
+            evicted_ns = app.state.rag_instance_order.pop(0)
+            evicted_rag = app.state.rag_instances.pop(evicted_ns, None)
+            if evicted_rag:
+                try:
+                    await evicted_rag.finalize_storages()
+                    logger.info(f"Evicted and finalized RAG instance for namespace: {evicted_ns}")
+                except Exception as e:
+                    logger.warning(f"Failed to finalize RAG instance for {evicted_ns}: {e}")
+
+        # Register new instance
+        app.state.rag_instances[namespace_prefix] = rag
+        app.state.rag_instance_order.append(namespace_prefix)
+
+        return rag
+
+    app.state.rag_factory = async_rag_factory
+    
+
+    # NOTE: Routers must be added after LightRAG is instantiated per namespace inside routes
     # Add routes
-    app.include_router(create_document_routes(rag, doc_manager, api_key))
-    app.include_router(create_query_routes(rag, api_key, args.top_k))
-    app.include_router(create_graph_routes(rag, api_key))
-    app.include_router(create_reply_routes(rag, api_key))
-
-    # Add Ollama API routes
-    ollama_api = OllamaAPI(rag, top_k=args.top_k)
-    app.include_router(ollama_api.router, prefix="/api")
+    app.include_router(create_document_routes(doc_manager, api_key))
+    # app.include_router(create_query_routes(api_key, args.top_k))
+    # app.include_router(create_graph_routes(api_key))
+    app.include_router(create_reply_routes(api_key))
 
     @app.get("/health", dependencies=[Depends(optional_api_key)])
     async def get_status():

@@ -5,14 +5,21 @@ This module contains all reply-related routes for the LightRAG API.
 import json
 import logging
 from typing import Any, Dict, List, Optional
-
-from fastapi import APIRouter, Depends, HTTPException
-from ..utils_api import get_api_key_dependency
+from fastapi import APIRouter, Depends, HTTPException, Header, Query, Request
+from ..utils_api import get_api_key_dependency, get_resolved_namespace, get_rag_from_app
 from pydantic import BaseModel, Field, field_validator
 
 from ascii_colors import trace_exception
 
+logger = logging.getLogger(__name__)
 router = APIRouter(tags=["reply"])
+
+# Creates or returns rag instance
+async def get_rag(
+    request: Request,
+    namespace: Optional[str] = Depends(get_resolved_namespace)
+) -> Any:
+    return await get_rag_from_app(request, namespace)
 
 
 class ReplyRequest(BaseModel):
@@ -59,25 +66,21 @@ class ReplyResponse(BaseModel):
         description="The generated reply text.",
     )
 
-
-def create_reply_routes(rag, api_key: Optional[str] = None):
+def create_reply_routes(api_key: Optional[str] = None):
     optional_api_key = get_api_key_dependency(api_key)
-
-
-    @router.post("/coach_reply", response_model=ReplyResponse)
-    async def reply_text(request: ReplyRequest) -> ReplyResponse:
-        """
-        Handle a POST request at the /coach_reply endpoint to generate a life coach response.
-
-        Parameters:
-            conversation_history (List[Dict[str, str]]): The conversation history.
-        Returns:
-            dict: Generated reply.
-        """
-        try:
-            response_text = await rag.acoach_reply(request.conversation_history)
-            return ReplyResponse(reply=response_text)
-        except Exception as e:
-            raise HTTPException(status_code=500, detail=str(e))
-
     return router
+
+
+@router.post("/coach_reply", response_model=ReplyResponse)
+async def reply_text(
+    request: ReplyRequest,
+    rag: Any = Depends(get_rag)
+) -> ReplyResponse:
+    """
+    Handle a POST request at the /coach_reply endpoint to generate a life coach response.
+    """
+    try:
+        response_text = await rag.acoach_reply(request.conversation_history)
+        return ReplyResponse(reply=response_text)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
