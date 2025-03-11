@@ -42,6 +42,7 @@ if not pm.is_installed("asyncpg"):
 import asyncpg  # type: ignore
 from asyncpg import Pool  # type: ignore
 
+from .postgres_utils import safe_decode_agtype_column
 
 class PostgreSQLDB:
     def __init__(self, config: dict[str, Any], **kwargs: Any):
@@ -772,10 +773,10 @@ class PGGraphStorage(BaseGraphStorage):
     def _record_to_dict(record: asyncpg.Record) -> dict[str, Any]:
         """
         Convert a record returned from an age query to a dictionary
-
+ 
         Args:
             record (): a record from an age query result
-
+ 
         Returns:
             dict[str, Any]: a dictionary representation of the record where
                 the dictionary key is the field name and the value is the
@@ -783,51 +784,70 @@ class PGGraphStorage(BaseGraphStorage):
         """
         # result holder
         d = {}
-
+ 
         # prebuild a mapping of vertex_id to vertex mappings to be used
         # later to build edges
         vertices = {}
         for k in record.keys():
             v = record[k]
+            dtype = ""
+            logger.debug(f"Pre Processing column '{k}' with value: {repr(v)}")
             # agtype comes back '{key: value}::type' which must be parsed
             if isinstance(v, str) and "::" in v:
-                dtype = v.split("::")[-1]
-                v = v.split("::")[0]
+                import re
+                v = re.sub(r'::[^,\]]*(?=[,\]])', '', v)
+                logger.debug(f"Post Processing column '{k}' with value: {repr(v)}")
                 if dtype == "vertex":
-                    vertex = json.loads(v)
-                    vertices[vertex["id"]] = vertex.get("properties")
-
-        # iterate returned fields and parse appropriately
-        for k in record.keys():
-            v = record[k]
-            if isinstance(v, str) and "::" in v:
-                dtype = v.split("::")[-1]
-                v = v.split("::")[0]
-            else:
-                dtype = ""
-
-            if dtype == "vertex":
-                vertex = json.loads(v)
-                field = vertex.get("properties")
-                if not field:
-                    field = {}
-                field["label"] = PGGraphStorage._decode_graph_label(field["node_id"])
-                d[k] = field
-            # convert edge from id-label->id by replacing id with node information
-            # we only do this if the vertex was also returned in the query
-            # this is an attempt to be consistent with neo4j implementation
-            elif dtype == "edge":
-                edge = json.loads(v)
-                d[k] = (
-                    vertices.get(edge["start_id"], {}),
-                    edge[
-                        "label"
-                    ],  # we don't use decode_graph_label(), since edge label is always "DIRECTED"
-                    vertices.get(edge["end_id"], {}),
-                )
-            else:
-                d[k] = json.loads(v) if isinstance(v, str) else v
-
+                    try:
+                        logger.debug(f"Attempting to decode vertex JSON from column '{k}': {repr(v)}")
+                        vertex = json.loads(v)
+                        vertices[vertex["id"]] = vertex.get("properties", {})
+                    except json.JSONDecodeError as e:
+                        logger.warning(f"Failed to decode vertex JSON in column '{k}': {v}. Error: {e}")
+                        continue
+ 
+        for column in record.keys():
+            value = record[column]
+            dtype = ""
+            logger.debug(f"Pre pre Processing column '{column}' with value: {repr(value)}")
+            if isinstance(value, str) and "::" in value:
+                dtype_match = re.search(r"::([^\s,\]]+)", value)
+                dtype = dtype_match.group(1) if dtype_match else ""
+                value = re.sub(r'::[^,\]]*(?=[,\]])', '', value)
+            logger.debug(f"Post Processing dtype '{dtype}' column '{column}' with value: {repr(value)}")
+            try:
+                if dtype == "vertex":
+                    if isinstance(value, str):
+                        value = json.loads(value)
+                    if isinstance(value, list):
+                        processed = []
+                        for vertex in value:
+                            if isinstance(vertex, dict):
+                                processed.append(vertex.get("properties", {}))
+                        d[column] = processed
+                    elif isinstance(value, dict):
+                        d[column] = value.get("properties", {})
+                    else:
+                        d[column] = value
+                elif dtype == "edge":
+                    if isinstance(value, str):
+                        value = json.loads(value)
+                    if isinstance(value, list):
+                        processed = []
+                        for edge in value:
+                            if isinstance(edge, dict):
+                                processed.append(edge.get("properties", {}))
+                        d[column] = processed
+                    elif isinstance(value, dict):
+                        d[column] = value.get("properties", {})
+                    else:
+                        d[column] = value
+                else:
+                    d[column] = safe_decode_agtype_column(value, column) if isinstance(value, str) and value.strip() else value
+            except json.JSONDecodeError as e:
+                logger.warning(f"Failed to decode JSON in column '{column}': {value}. Error: {e}")
+                d[column] = value
+ 
         return d
 
     @staticmethod
@@ -1246,8 +1266,12 @@ class PGGraphStorage(BaseGraphStorage):
         )
 
         results = await self._query(query)
-        labels = [self._decode_graph_label(result["label"]) for result in results]
-
+        labels = []
+        for result in results:
+            try:
+                labels.append(self._decode_graph_label(result["label"]))
+            except Exception as e:
+                logger.warning(f"Failed to decode label: {result['label']}. Error: {e}")
         return labels
 
     async def embed_nodes(
@@ -1300,7 +1324,7 @@ class PGGraphStorage(BaseGraphStorage):
                          OPTIONAL MATCH p = (n)-[*..%d]-(m)
                          RETURN nodes(p) AS nodes, relationships(p) AS relationships
                          LIMIT %d
-                       $$) AS (nodes agtype[], relationships agtype[])""" % (
+                       $$) AS (nodes agtype, relationships agtype)""" % (
                 self.graph_name,
                 encoded_node_label,
                 max_depth,
@@ -1326,18 +1350,50 @@ class PGGraphStorage(BaseGraphStorage):
                     tgt_id = self._decode_graph_label(edge["end_id"])
                     edges.append((src_id, tgt_id))
             else:
-                if result["nodes"]:
-                    for node in result["nodes"]:
+                node_entries = result.get("nodes")
+                rel_entries = result.get("relationships")
+
+                if isinstance(node_entries, str):
+                    try:
+                        node_entries = json.loads(node_entries)
+                    except json.JSONDecodeError as e:
+                        logger.warning(f"Failed to decode JSON in column 'nodes': {node_entries}. Error: {e}")
+                        node_entries = []
+
+                if isinstance(rel_entries, str):
+                    try:
+                        rel_entries = json.loads(rel_entries)
+                    except json.JSONDecodeError as e:
+                        logger.warning(f"Failed to decode JSON in column 'relationships': {rel_entries}. Error: {e}")
+                        rel_entries = []
+
+                if not isinstance(node_entries, list):
+                    node_entries = [node_entries]
+                if not isinstance(rel_entries, list):
+                    rel_entries = [rel_entries]
+
+                for node in node_entries:
+                    if node and isinstance(node, dict) and "node_id" in node:
                         nodes.add(self._decode_graph_label(node["node_id"]))
-                if result["relationships"]:
-                    for edge in result["relationships"]:
-                        src_id = self._decode_graph_label(edge["start_id"])
-                        tgt_id = self._decode_graph_label(edge["end_id"])
+
+                for edge in rel_entries:
+                    if edge and isinstance(edge, dict):
+                        src_id = self._decode_graph_label(edge.get("start_id", ""))
+                        tgt_id = self._decode_graph_label(edge.get("end_id", ""))
                         edges.append((src_id, tgt_id))
 
         kg = KnowledgeGraph(
-            nodes=[KnowledgeGraphNode(id=node_id) for node_id in nodes],
-            edges=[KnowledgeGraphEdge(source=src, target=tgt) for src, tgt in edges],
+            nodes=[KnowledgeGraphNode(id=node_id, labels=[], properties={}) for node_id in nodes],
+            edges=[
+                KnowledgeGraphEdge(
+                    id=f"{src}->{tgt}",
+                    source=src,
+                    target=tgt,
+                    type="DIRECTED",
+                    properties={}
+                )
+                for src, tgt in edges
+            ],
         )
 
         return kg

@@ -2,20 +2,27 @@
 This module contains all graph-related routes for the LightRAG API.
 """
 
-from typing import Optional
+from typing import Optional, Any
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Request
 
-from ..utils_api import get_api_key_dependency
+from ..utils_api import get_api_key_dependency, get_resolved_namespace, get_rag_from_app
 
 router = APIRouter(tags=["graph"])
 
+# Creates or returns rag instance
+async def get_rag(
+    request: Request,
+    namespace: Optional[str] = Depends(get_resolved_namespace)
+) -> Any:
+    return await get_rag_from_app(request, namespace)
 
-def create_graph_routes(rag, api_key: Optional[str] = None):
+
+def create_graph_routes(api_key: Optional[str] = None):
     optional_api_key = get_api_key_dependency(api_key)
 
     @router.get("/graph/label/list", dependencies=[Depends(optional_api_key)])
-    async def get_graph_labels():
+    async def get_graph_labels(rag: Any = Depends(get_rag)):
         """
         Get all graph labels
 
@@ -25,7 +32,7 @@ def create_graph_routes(rag, api_key: Optional[str] = None):
         return await rag.get_graph_labels()
 
     @router.get("/graphs", dependencies=[Depends(optional_api_key)])
-    async def get_knowledge_graph(label: str, max_depth: int = 3):
+    async def get_knowledge_graph(label: str, max_depth: int = 3, rag: Any = Depends(get_rag)):
         """
         Retrieve a connected subgraph of nodes where the label includes the specified label.
         Maximum number of nodes is constrained by the environment variable `MAX_GRAPH_NODES` (default: 1000).

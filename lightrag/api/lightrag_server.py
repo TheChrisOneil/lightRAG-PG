@@ -133,41 +133,6 @@ def create_app(args):
     # Initialize document manager
     doc_manager = DocumentManager(args.input_dir)
 
-    # @asynccontextmanager
-    # async def lifespan(app: FastAPI):
-    #     """Lifespan context manager for startup and shutdown events"""
-    #     # Store background tasks
-    #     app.state.background_tasks = set()
-
-    #     try:
-    #         # Initialize database connections
-    #         # Initialization of storages is now handled per namespace
-    #         await initialize_pipeline_status()
-
-    #         # Auto scan documents if enabled
-    #         if args.auto_scan_at_startup:
-    #             # Check if a task is already running (with lock protection)
-    #             pipeline_status = await get_namespace_data("pipeline_status")
-    #             should_start_task = False
-    #             async with get_pipeline_status_lock():
-    #                 if not pipeline_status.get("busy", False):
-    #                     should_start_task = True
-    #             # Only start the task if no other task is running
-    #             if should_start_task:
-    #                 # Create background task
-    #                 task = asyncio.create_task(run_scanning_process(app.state.rag_factory(), doc_manager))
-    #                 app.state.background_tasks.add(task)
-    #                 task.add_done_callback(app.state.background_tasks.discard)
-    #                 logger.info("Auto scan task started at startup.")
-
-    #         ASCIIColors.green("\nServer is ready to accept connections! 🚀\n")
-
-    #         yield
-
-    #     finally:
-    #         # Clean up database connections
-    #         await rag.finalize_storages()
-
     from contextlib import asynccontextmanager
 
     @asynccontextmanager
@@ -401,8 +366,8 @@ def create_app(args):
     # NOTE: Routers must be added after LightRAG is instantiated per namespace inside routes
     # Add routes
     app.include_router(create_document_routes(doc_manager, api_key))
-    # app.include_router(create_query_routes(api_key, args.top_k))
-    # app.include_router(create_graph_routes(api_key))
+    app.include_router(create_query_routes(api_key, args.top_k))
+    app.include_router(create_graph_routes(api_key))
     app.include_router(create_reply_routes(api_key))
 
     @app.get("/health", dependencies=[Depends(optional_api_key)])
