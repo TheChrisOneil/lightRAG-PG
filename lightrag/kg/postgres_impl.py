@@ -34,11 +34,6 @@ if sys.platform.startswith("win"):
 
     asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
 
-import pipmaster as pm
-
-if not pm.is_installed("asyncpg"):
-    pm.install("asyncpg")
-
 import asyncpg  # type: ignore
 from asyncpg import Pool  # type: ignore
 
@@ -791,15 +786,15 @@ class PGGraphStorage(BaseGraphStorage):
         for k in record.keys():
             v = record[k]
             dtype = ""
-            logger.debug(f"Pre Processing column '{k}' with value: {repr(v)}")
+            logger.debug(f"vertex Processing column '{k}' with value: {repr(v)}")
             # agtype comes back '{key: value}::type' which must be parsed
             if isinstance(v, str) and "::" in v:
                 import re
                 v = re.sub(r'::[^,\]]*(?=[,\]])', '', v)
-                logger.debug(f"Post Processing column '{k}' with value: {repr(v)}")
+                # logger.debug(f"Post Processing column '{k}' with value: {repr(v)}")
                 if dtype == "vertex":
                     try:
-                        logger.debug(f"Attempting to decode vertex JSON from column '{k}': {repr(v)}")
+                        # logger.debug(f"Attempting to decode vertex JSON from column '{k}': {repr(v)}")
                         vertex = json.loads(v)
                         vertices[vertex["id"]] = vertex.get("properties", {})
                     except json.JSONDecodeError as e:
@@ -809,12 +804,12 @@ class PGGraphStorage(BaseGraphStorage):
         for column in record.keys():
             value = record[column]
             dtype = ""
-            logger.debug(f"Pre pre Processing column '{column}' with value: {repr(value)}")
+            logger.debug(f"vertex, node, other Processing column '{column}' with value: {repr(value)}")
             if isinstance(value, str) and "::" in value:
                 dtype_match = re.search(r"::([^\s,\]]+)", value)
                 dtype = dtype_match.group(1) if dtype_match else ""
                 value = re.sub(r'::[^,\]]*(?=[,\]])', '', value)
-            logger.debug(f"Post Processing dtype '{dtype}' column '{column}' with value: {repr(value)}")
+            # logger.debug(f"Post Processing dtype '{dtype}' column '{column}' with value: {repr(value)}")
             try:
                 if dtype == "vertex":
                     if isinstance(value, str):
@@ -1332,7 +1327,8 @@ class PGGraphStorage(BaseGraphStorage):
             )
 
         results = await self._query(query)
-
+        logger.debug(f"------------------------------------------")
+        logger.debug(f"Graph query results: {results}")
         nodes = set()
         edges = []
 
@@ -1378,22 +1374,27 @@ class PGGraphStorage(BaseGraphStorage):
 
                 for edge in rel_entries:
                     if edge and isinstance(edge, dict):
-                        src_id = self._decode_graph_label(edge.get("start_id", ""))
-                        tgt_id = self._decode_graph_label(edge.get("end_id", ""))
-                        edges.append((src_id, tgt_id))
+                        src_id = self._decode_graph_label(edge.get("start_id", "")) if edge.get("start_id") else ""
+                        tgt_id = self._decode_graph_label(edge.get("end_id", "")) if edge.get("end_id") else ""
+                        edge_id = str(edge.get("id", f"{src_id}->{tgt_id}"))
+                        edge_type = str(edge.get("label", "DIRECTED"))
+                        properties = edge.get("properties", {})
+                        # Add source and target node properties if available
+                        if "start_node" in edge and isinstance(edge["start_node"], dict):
+                            src_id = self._decode_graph_label(edge["start_node"].get("node_id", src_id))
+                        if "end_node" in edge and isinstance(edge["end_node"], dict):
+                            tgt_id = self._decode_graph_label(edge["end_node"].get("node_id", tgt_id))
+                        edges.append(KnowledgeGraphEdge(
+                            id=edge_id,
+                            source=src_id,
+                            target=tgt_id,
+                            type=edge_type,
+                            properties=properties,
+                        ))
 
         kg = KnowledgeGraph(
             nodes=[KnowledgeGraphNode(id=node_id, labels=[], properties={}) for node_id in nodes],
-            edges=[
-                KnowledgeGraphEdge(
-                    id=f"{src}->{tgt}",
-                    source=src,
-                    target=tgt,
-                    type="DIRECTED",
-                    properties={}
-                )
-                for src, tgt in edges
-            ],
+            edges=edges
         )
 
         return kg

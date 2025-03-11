@@ -8,3 +8,5 @@ python-multipart
 tenacity
 tiktoken
 uvicorn
+asyncpg
+pydantic
