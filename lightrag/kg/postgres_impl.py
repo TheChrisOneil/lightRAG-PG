@@ -31,7 +31,6 @@ from ..utils import logger
 
 if sys.platform.startswith("win"):
     import asyncio.windows_events
-
     asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
 
 import asyncpg  # type: ignore
@@ -786,11 +785,17 @@ class PGGraphStorage(BaseGraphStorage):
         for k in record.keys():
             v = record[k]
             dtype = ""
-            logger.debug(f"vertex Processing column '{k}' with value: {repr(v)}")
+            try:
+                formatted_value = json.dumps(json.loads(re.sub(r'::[^,\\]]*(?=[,\\]])', ']', v)), indent=2)
+                logger.debug(f"vertex Processing column '{k}' with value:\n{formatted_value}")
+            except Exception:
+                logger.debug(f"vertex Processing column '{k}' with value: {repr(v)}")
             # agtype comes back '{key: value}::type' which must be parsed
             if isinstance(v, str) and "::" in v:
                 import re
-                v = re.sub(r'::[^,\]]*(?=[,\]])', '', v)
+                v = re.sub(r'::[^,\]]*(?=[,\]])', ']', v)  #TODO fix why v is missing the last bracket
+                dtype_match = re.search(r"::([^\s,\]]+)", v)
+                dtype = dtype_match.group(1) if dtype_match else ""
                 # logger.debug(f"Post Processing column '{k}' with value: {repr(v)}")
                 if dtype == "vertex":
                     try:
@@ -804,7 +809,10 @@ class PGGraphStorage(BaseGraphStorage):
         for column in record.keys():
             value = record[column]
             dtype = ""
-            logger.debug(f"vertex, node, other Processing column '{column}' with value: {repr(value)}")
+            try:
+                logger.debug(f"vertex, node, other Processing column '{column}' with value:\n{json.dumps(json.loads(value), indent=2)}")
+            except Exception:
+                logger.debug(f"vertex, node, other Processing column '{column}' with value: {repr(value)}")
             if isinstance(value, str) and "::" in value:
                 dtype_match = re.search(r"::([^\s,\]]+)", value)
                 dtype = dtype_match.group(1) if dtype_match else ""
@@ -831,14 +839,26 @@ class PGGraphStorage(BaseGraphStorage):
                         processed = []
                         for edge in value:
                             if isinstance(edge, dict):
-                                processed.append(edge.get("properties", {}))
+                                edge_dict = {
+                                    "id": edge.get("id"),
+                                    "label": edge.get("label"),
+                                    "start_id": edge.get("start_id"),
+                                    "end_id": edge.get("end_id"),
+                                    "properties": edge.get("properties", {})
+                                }
+                                processed.append(edge_dict)
                         d[column] = processed
                     elif isinstance(value, dict):
-                        d[column] = value.get("properties", {})
+                        edge_dict = {
+                            "id": value.get("id"),
+                            "label": value.get("label"),
+                            "start_id": value.get("start_id"),
+                            "end_id": value.get("end_id"),
+                            "properties": value.get("properties", {})
+                        }
+                        d[column] = edge_dict
                     else:
-                        d[column] = value
-                else:
-                    d[column] = safe_decode_agtype_column(value, column) if isinstance(value, str) and value.strip() else value
+                        d[column] = safe_decode_agtype_column(value, column) if isinstance(value, str) and value.strip() else value
             except json.JSONDecodeError as e:
                 logger.warning(f"Failed to decode JSON in column '{column}': {value}. Error: {e}")
                 d[column] = value
@@ -888,14 +908,21 @@ class PGGraphStorage(BaseGraphStorage):
     def _decode_graph_label(encoded_label: str) -> str:
         """
         Since AGE supports only alphanumerical labels, we will encode generic label as HEX string
-
+ 
         Args:
             encoded_label (str): the encoded label
-
+ 
         Returns:
             str: the decoded label
         """
-        return bytes.fromhex(encoded_label.removeprefix("x")).decode()
+        if not isinstance(encoded_label, str):
+            encoded_label = str(encoded_label)
+
+        try:
+            return bytes.fromhex(encoded_label.removeprefix("x")).decode()
+        except (ValueError, AttributeError):
+            logger.warning(f"Could not decode graph label: {encoded_label}")
+            return str(encoded_label)
 
     @staticmethod
     def _get_col_name(field: str, idx: int) -> str:
@@ -1328,23 +1355,44 @@ class PGGraphStorage(BaseGraphStorage):
 
         results = await self._query(query)
         logger.debug(f"------------------------------------------")
-        logger.debug(f"Graph query results: {results}")
-        nodes = set()
+        logger.debug(f"Graph query results:\n{json.dumps(results, indent=2)}")
+        nodes_by_id = {}
         edges = []
 
         for result in results:
             if node_label == "*":
-                if result["n"]:
+                if result.get("n"):
                     node = result["n"]
-                    nodes.add(self._decode_graph_label(node["node_id"]))
-                if result["m"]:
+                    node_id = self._decode_graph_label(node.get("node_id", ""))
+                    node_obj = KnowledgeGraphNode(
+                        id=node_id,
+                        labels=[node.get("label", "Entity")],
+                        properties=node.get("properties", {})
+                    )
+                    nodes_by_id[node_id] = node_obj
+                if result.get("m"):
                     node = result["m"]
-                    nodes.add(self._decode_graph_label(node["node_id"]))
-                if result["r"]:
+                    node_id = self._decode_graph_label(node.get("node_id", ""))
+                    node_obj = KnowledgeGraphNode(
+                        id=node_id,
+                        labels=[node.get("label", "Entity")],
+                        properties=node.get("properties", {})
+                    )
+                    nodes_by_id[node_id] = node_obj
+                if result.get("r"):
                     edge = result["r"]
-                    src_id = self._decode_graph_label(edge["start_id"])
-                    tgt_id = self._decode_graph_label(edge["end_id"])
-                    edges.append((src_id, tgt_id))
+                    src_id = self._decode_graph_label(edge.get("start_id", ""))
+                    tgt_id = self._decode_graph_label(edge.get("end_id", ""))
+                    edge_id = str(edge.get("id", f"{src_id}->{tgt_id}"))
+                    edge_type = str(edge.get("label", "DIRECTED"))
+                    properties = edge.get("properties", {})
+                    edges.append(KnowledgeGraphEdge(
+                        id=edge_id,
+                        source=src_id,
+                        target=tgt_id,
+                        type=edge_type,
+                        properties=properties,
+                    ))
             else:
                 node_entries = result.get("nodes")
                 rel_entries = result.get("relationships")
@@ -1369,34 +1417,36 @@ class PGGraphStorage(BaseGraphStorage):
                     rel_entries = [rel_entries]
 
                 for node in node_entries:
-                    if node and isinstance(node, dict) and "node_id" in node:
-                        nodes.add(self._decode_graph_label(node["node_id"]))
+                    if isinstance(node, dict):
+                        node_id = self._decode_graph_label(node.get("node_id", ""))
+                        label = node.get("label", "Entity")
+                        properties = {k: v for k, v in node.items() if k not in ("node_id", "label")}
+                        node_obj = KnowledgeGraphNode(
+                            id=node_id,
+                            labels=[label],
+                            properties=properties
+                        )
+                        nodes_by_id[node_id] = node_obj
 
                 for edge in rel_entries:
-                    if edge and isinstance(edge, dict):
+                    if isinstance(edge, dict):
                         src_id = self._decode_graph_label(edge.get("start_id", "")) if edge.get("start_id") else ""
                         tgt_id = self._decode_graph_label(edge.get("end_id", "")) if edge.get("end_id") else ""
                         edge_id = str(edge.get("id", f"{src_id}->{tgt_id}"))
                         edge_type = str(edge.get("label", "DIRECTED"))
                         properties = edge.get("properties", {})
-                        # Add source and target node properties if available
-                        if "start_node" in edge and isinstance(edge["start_node"], dict):
-                            src_id = self._decode_graph_label(edge["start_node"].get("node_id", src_id))
-                        if "end_node" in edge and isinstance(edge["end_node"], dict):
-                            tgt_id = self._decode_graph_label(edge["end_node"].get("node_id", tgt_id))
                         edges.append(KnowledgeGraphEdge(
                             id=edge_id,
                             source=src_id,
                             target=tgt_id,
                             type=edge_type,
-                            properties=properties,
+                            properties=properties
                         ))
 
         kg = KnowledgeGraph(
-            nodes=[KnowledgeGraphNode(id=node_id, labels=[], properties={}) for node_id in nodes],
+            nodes=list(nodes_by_id.values()),
             edges=edges
         )
-
         return kg
 
     async def drop(self) -> None:

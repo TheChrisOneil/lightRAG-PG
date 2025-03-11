@@ -120,9 +120,9 @@ def setup_logger(
     """
     # Configure formatters
     detailed_formatter = logging.Formatter(
-        "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+        "%(asctime)s - %(name)s - %(levelname)s - %(filename)s:%(funcName)s - %(message)s"
     )
-    simple_formatter = logging.Formatter("%(levelname)s: %(message)s")
+    simple_formatter = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(filename)s:%(funcName)s - %(message)s")
 
     # Get log file path
     if log_file_path is None:
