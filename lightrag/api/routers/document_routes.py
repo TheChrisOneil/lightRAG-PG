@@ -687,9 +687,7 @@ def create_document_routes(
         Raises:
             HTTPException: If an error occurs during the clearing process (500).
         """
-        try:
-            
-            
+        try:            
             rag.text_chunks = []
             rag.entities_vdb = None
             rag.relationships_vdb = None

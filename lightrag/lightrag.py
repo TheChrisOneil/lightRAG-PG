@@ -631,7 +631,7 @@ class LightRAG:
         finally:
             if update_storage:
                 await self._insert_done()
-
+    
     async def apipeline_enqueue_documents(
         self, input: str | list[str], ids: list[str] | None = None
     ) -> None:

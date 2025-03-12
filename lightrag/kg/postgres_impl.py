@@ -779,90 +779,84 @@ class PGGraphStorage(BaseGraphStorage):
         # result holder
         d = {}
  
-        # prebuild a mapping of vertex_id to vertex mappings to be used
-        # later to build edges
-        vertices = {}
-        for k in record.keys():
-            v = record[k]
-            dtype = ""
-            try:
-                formatted_value = json.dumps(json.loads(re.sub(r'::[^,\\]]*(?=[,\\]])', ']', v)), indent=2)
-                logger.debug(f"vertex Processing column '{k}' with value:\n{formatted_value}")
-            except Exception:
-                logger.debug(f"vertex Processing column '{k}' with value: {repr(v)}")
-            # agtype comes back '{key: value}::type' which must be parsed
-            if isinstance(v, str) and "::" in v:
-                import re
-                v = re.sub(r'::[^,\]]*(?=[,\]])', ']', v)  #TODO fix why v is missing the last bracket
-                dtype_match = re.search(r"::([^\s,\]]+)", v)
-                dtype = dtype_match.group(1) if dtype_match else ""
-                # logger.debug(f"Post Processing column '{k}' with value: {repr(v)}")
-                if dtype == "vertex":
-                    try:
-                        # logger.debug(f"Attempting to decode vertex JSON from column '{k}': {repr(v)}")
-                        vertex = json.loads(v)
-                        vertices[vertex["id"]] = vertex.get("properties", {})
-                    except json.JSONDecodeError as e:
-                        logger.warning(f"Failed to decode vertex JSON in column '{k}': {v}. Error: {e}")
-                        continue
+        # # prebuild a mapping of vertex_id to vertex mappings to be used
+        # # later to build edges
+        # vertices = {}
+        # for k in record.keys():
+        #     v = record[k]
+        #     dtype = ""
+        #     # agtype comes back '{key: value}::type' which must be parsed
+        #     if isinstance(v, str) and "::" in v:
+        #         import re
+        #         cleaned_value = re.sub(r'::\w+$', '', v)
+        #         formatted_value = json.dumps(json.loads(cleaned_value), indent=2)
+        #         logger.debug(f"vertex Processing column '{k}' with value:\n{formatted_value}")
+        #         dtype_match = re.search(r'::(\w+)$', v)
+        #         dtype = dtype_match.group(1) if dtype_match else ""
+        #         if dtype == "vertex":
+        #             try:
+        #                 vertex = json.loads(cleaned_value)
+        #                 vertices[vertex["id"]] = vertex.get("properties", {})
+        #             except json.JSONDecodeError as e:
+        #                 logger.warning(f"Failed to decode vertex JSON in column '{k}': {v}. Error: {e}")
+        #                 continue
  
         for column in record.keys():
             value = record[column]
             dtype = ""
-            try:
-                logger.debug(f"vertex, node, other Processing column '{column}' with value:\n{json.dumps(json.loads(value), indent=2)}")
-            except Exception:
-                logger.debug(f"vertex, node, other Processing column '{column}' with value: {repr(value)}")
+            # if the results are of type agtype 
             if isinstance(value, str) and "::" in value:
-                dtype_match = re.search(r"::([^\s,\]]+)", value)
+                dtype_match = re.search(r'::(\w+)$', value)
                 dtype = dtype_match.group(1) if dtype_match else ""
-                value = re.sub(r'::[^,\]]*(?=[,\]])', '', value)
-            # logger.debug(f"Post Processing dtype '{dtype}' column '{column}' with value: {repr(value)}")
-            try:
-                if dtype == "vertex":
-                    if isinstance(value, str):
-                        value = json.loads(value)
-                    if isinstance(value, list):
-                        processed = []
-                        for vertex in value:
-                            if isinstance(vertex, dict):
-                                processed.append(vertex.get("properties", {}))
-                        d[column] = processed
-                    elif isinstance(value, dict):
-                        d[column] = value.get("properties", {})
-                    else:
-                        d[column] = value
-                elif dtype == "edge":
-                    if isinstance(value, str):
-                        value = json.loads(value)
-                    if isinstance(value, list):
-                        processed = []
-                        for edge in value:
-                            if isinstance(edge, dict):
-                                edge_dict = {
-                                    "id": edge.get("id"),
-                                    "label": edge.get("label"),
-                                    "start_id": edge.get("start_id"),
-                                    "end_id": edge.get("end_id"),
-                                    "properties": edge.get("properties", {})
-                                }
-                                processed.append(edge_dict)
-                        d[column] = processed
-                    elif isinstance(value, dict):
-                        edge_dict = {
-                            "id": value.get("id"),
-                            "label": value.get("label"),
-                            "start_id": value.get("start_id"),
-                            "end_id": value.get("end_id"),
-                            "properties": value.get("properties", {})
-                        }
-                        d[column] = edge_dict
-                    else:
-                        d[column] = safe_decode_agtype_column(value, column) if isinstance(value, str) and value.strip() else value
-            except json.JSONDecodeError as e:
-                logger.warning(f"Failed to decode JSON in column '{column}': {value}. Error: {e}")
-                d[column] = value
- 
+                value = re.sub(r'::\w+$', '', value)
+                formatted_value = json.dumps(json.loads(value), indent=2)
+                logger.debug(f"Graph processing of type: '{dtype}' with value:\n{formatted_value}")
+                try:
+                    if dtype == "vertex":
+                        if isinstance(value, str):
+                            value = json.loads(value)
+                        if isinstance(value, list):
+                            processed = []
+                            for vertex in value:
+                                if isinstance(vertex, dict):
+                                    processed.append(vertex.get("properties", {}))
+                            d[column] = processed
+                        elif isinstance(value, dict):
+                            d[column] = value.get("properties", {})
+                        else:
+                            d[column] = value
+                    elif dtype == "edge":
+                        if isinstance(value, str):
+                            value = json.loads(value)
+                        if isinstance(value, list):
+                            processed = []
+                            for edge in value:
+                                if isinstance(edge, dict):
+                                    edge_dict = {
+                                        "id": edge.get("id"),
+                                        "label": edge.get("label"),
+                                        "start_id": edge.get("start_id"),
+                                        "end_id": edge.get("end_id"),
+                                        "properties": edge.get("properties", {})
+                                    }
+                                    processed.append(edge_dict)
+                            d[column] = processed
+                        elif isinstance(value, dict):
+                            edge_dict = {
+                                "id": value.get("id"),
+                                "label": value.get("label"),
+                                "start_id": value.get("start_id"),
+                                "end_id": value.get("end_id"),
+                                "properties": value.get("properties", {})
+                            }
+                            d[column] = edge_dict
+                        else:
+                            d[column] = safe_decode_agtype_column(value, column) if isinstance(value, str) and value.strip() else value
+                except json.JSONDecodeError as e:
+                    logger.warning(f"Failed to decode JSON in column '{column}': {value}. Error: {e}")
+                    d[column] = value
+            else:
+                d[column] = safe_decode_agtype_column(value, column) if isinstance(value, str) and value.strip() else value
         return d
 
     @staticmethod
@@ -1291,9 +1285,13 @@ class PGGraphStorage(BaseGraphStorage):
         labels = []
         for result in results:
             try:
-                labels.append(self._decode_graph_label(result["label"]))
+                label_value = result.get("label")
+                if label_value:
+                    labels.append(self._decode_graph_label(label_value))
+                else:
+                    logger.warning(f"Missing 'label' key in result: {result}")
             except Exception as e:
-                logger.warning(f"Failed to decode label: {result['label']}. Error: {e}")
+                logger.warning(f"Failed to decode label from result: {result}. Error: {e}")
         return labels
 
     async def embed_nodes(
@@ -1466,7 +1464,6 @@ NAMESPACE_TABLE_MAP = {
     NameSpace.DOC_STATUS: "LIGHTRAG_DOC_STATUS",
     NameSpace.KV_STORE_LLM_RESPONSE_CACHE: "LIGHTRAG_LLM_CACHE",
 }
-
 
 def namespace_to_table_name(namespace: str) -> str:
     for k, v in NAMESPACE_TABLE_MAP.items():
