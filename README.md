@@ -7,7 +7,7 @@ This repository contains a Postgres-configured version of LightRAG. The system i
 1. **Clone the Repository**
 
 ```bash
-git clone https://github.com/BridgeCare-ai/AI-Assistant
+git clone https://github.com/BridgeCare-ai/AI-Assistant Branch init
 cd lightrag-pg
 
 docker-compose up --build
