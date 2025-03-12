@@ -197,7 +197,7 @@ export default function QuerySettings() {
                   placeholder="Enter keywords"
                 />
               </>
-
+ 
               <>
                 <Text
                   className="ml-1"
@@ -220,6 +220,20 @@ export default function QuerySettings() {
                 />
               </>
             </>
+
+            <Text
+              className="ml-1"
+              text="Namespace"
+              tooltip="This will be passed as the x-namespace header in query requests"
+              side="left"
+            />
+            <Input
+              id="namespace"
+              type="text"
+              value={querySettings.namespace ?? ''}
+              onChange={(e) => handleChange('namespace', e.target.value)}
+              placeholder="Enter namespace"
+            />
 
             {/* Toggle Options */}
             <>

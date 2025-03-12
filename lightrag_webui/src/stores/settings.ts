@@ -34,7 +34,7 @@ interface SettingsState {
 
   querySettings: Omit<QueryRequest, 'query'>
   updateQuerySettings: (settings: Partial<QueryRequest>) => void
-
+ 
   // Auth settings
   apiKey: string | null
   setApiKey: (key: string | null) => void
@@ -90,10 +90,13 @@ const useSettingsStoreBase = create<SettingsState>()(
         stream: true,
         history_turns: 3,
         hl_keywords: [],
-        ll_keywords: []
+        ll_keywords: [],
+        namespace: undefined
       },
 
       setTheme: (theme: Theme) => set({ theme }),
+
+      setEnableHealthCheck: (enable: boolean) => set({ enableHealthCheck: enable }),
 
       setGraphLayoutMaxIterations: (iterations: number) =>
         set({
@@ -106,8 +109,6 @@ const useSettingsStoreBase = create<SettingsState>()(
         }),
 
       setGraphQueryMaxDepth: (depth: number) => set({ graphQueryMaxDepth: depth }),
-
-      setEnableHealthCheck: (enable: boolean) => set({ enableHealthCheck: enable }),
 
       setApiKey: (apiKey: string | null) => set({ apiKey }),
 

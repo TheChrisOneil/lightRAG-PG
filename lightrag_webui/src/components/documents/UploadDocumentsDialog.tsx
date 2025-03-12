@@ -1,4 +1,5 @@
 import { useState, useCallback } from 'react'
+import { useSettingsStore } from '@/stores/settings'
 import Button from '@/components/ui/Button'
 import {
   Dialog,
@@ -19,6 +20,7 @@ export default function UploadDocumentsDialog() {
   const [open, setOpen] = useState(false)
   const [isUploading, setIsUploading] = useState(false)
   const [progresses, setProgresses] = useState<Record<string, number>>({})
+  const [namespace, setNamespace] = useState(() => useSettingsStore.getState().querySettings?.namespace ?? '')
 
   const handleDocumentsUpload = useCallback(
     async (filesToUpload: File[]) => {
@@ -28,13 +30,16 @@ export default function UploadDocumentsDialog() {
         await Promise.all(
           filesToUpload.map(async (file) => {
             try {
-              const result = await uploadDocument(file, (percentCompleted: number) => {
-                console.debug(`Uploading ${file.name}: ${percentCompleted}%`)
-                setProgresses((pre) => ({
-                  ...pre,
-                  [file.name]: percentCompleted
-                }))
-              })
+              const result = await uploadDocument(
+                file,
+                (percentCompleted: number) => {
+                  console.debug(`Uploading ${file.name}: ${percentCompleted}%`)
+                  setProgresses((pre) => ({
+                    ...pre,
+                    [file.name]: percentCompleted
+                  }))
+                }
+              )
               if (result.status === 'success') {
                 toast.success(`Upload Success:\n${file.name} uploaded successfully`)
               } else {
@@ -77,6 +82,28 @@ export default function UploadDocumentsDialog() {
             Drag and drop your documents here or click to browse.
           </DialogDescription>
         </DialogHeader>
+        <div className="mb-4">
+          <label htmlFor="namespace-input" className="block text-sm font-medium text-gray-700 mb-1">
+            Namespace
+          </label>
+          <input
+            id="namespace-input"
+            type="text"
+            className="w-full border border-gray-300 rounded px-3 py-2 text-sm"
+            value={namespace}
+            onChange={(e) => {
+              const newNamespace = e.target.value
+              setNamespace(newNamespace)
+              useSettingsStore.setState({
+                querySettings: {
+                  ...useSettingsStore.getState().querySettings,
+                  namespace: newNamespace
+                }
+              })
+            }}
+            placeholder="Enter namespace"
+          />
+        </div>
         <FileUploader
           maxFileCount={Infinity}
           maxSize={200 * 1024 * 1024}

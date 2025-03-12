@@ -96,6 +96,8 @@ export type QueryRequest = {
   conversation_history?: Message[]
   /** Number of complete conversation turns (user-assistant pairs) to consider in the response context. */
   history_turns?: number
+  /** Namespace for the query. */
+  namespace?: string
 }
 
 export type QueryResponse = {
@@ -130,18 +132,20 @@ export const RequireApiKeError = 'API Key required'
 
 // Axios instance
 const axiosInstance = axios.create({
-  baseURL: backendBaseUrl,
-  headers: {
-    'Content-Type': 'application/json'
-  }
+  baseURL: backendBaseUrl
 })
 
 // Interceptor：add api key
 axiosInstance.interceptors.request.use((config) => {
   const apiKey = useSettingsStore.getState().apiKey
+  const namespace = useSettingsStore.getState().querySettings.namespace
   if (apiKey) {
     config.headers['X-API-Key'] = apiKey
   }
+  if (namespace) {
+    config.headers['x-namespace'] = namespace
+  }
+  config.headers['Content-Type'] = 'application/json'
   return config
 })
 
