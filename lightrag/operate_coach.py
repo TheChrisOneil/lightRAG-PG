@@ -7,8 +7,9 @@ def format_conversation_history(conversation_history: List[Dict[str, Any]]) -> s
         user_str = ""
         coach_str = ""
 
+        # User message is optional in the turn in the case the coach starts the conversation
         user = turn.get("userMessage")
-        if user:
+        if user and isinstance(user, dict) and user.get("content"):
             user_str = (
                 f"Student [{user.get('timestamp', 'N/A')}]: {user.get('content', '')}\n"
                 f"  - Intent: {user.get('intent', '')}\n"
@@ -19,8 +20,9 @@ def format_conversation_history(conversation_history: List[Dict[str, Any]]) -> s
                 f"  - Level: {user.get('level', '')}"
             )
 
+        # Coach message is optional in the turn in the case the student starts the conversation
         coach = turn.get("coachMessage")
-        if coach:
+        if coach and isinstance(coach, dict) and coach.get("content"):
             coach_str = f"Coach [{coach.get('timestamp', 'N/A')}]: {coach.get('content', '')}"
             if coach.get("aiSuggestions"):
                 suggestions = coach["aiSuggestions"]

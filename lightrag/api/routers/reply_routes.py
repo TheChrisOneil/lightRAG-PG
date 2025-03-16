@@ -58,7 +58,7 @@ class CoachMessage(BaseModel):
     timestamp: str
 
 class DialogTurn(BaseModel):
-    userMessage: UserMessage
+    userMessage: Optional[UserMessage] = None
     coachMessage: Optional[CoachMessage] = None
 
 class ReplyRequest(BaseModel):
