@@ -25,6 +25,8 @@ from .base import (
     QueryParam,
     StorageNameSpace,
     StoragesStatus,
+    ReplyParam,
+    DialogTurn,
 )
 from .namespace import NameSpace, make_namespace
 from .operate import (
@@ -36,6 +38,7 @@ from .operate import (
     mix_kg_vector_query,
     naive_query,
 )
+from .operate_coach import (find_missing_keys_in_history, format_conversation_history)
 from .prompt import GRAPH_FIELD_SEP, PROMPTS
 from .utils import (
     EmbeddingFunc,
@@ -1386,37 +1389,57 @@ class LightRAG:
   
     async def acoach_reply(
         self,
-        conversation_history: list[dict], system_prompt: Optional[str] = None
+         student_name: str,
+         speaker: str,
+         content: str,
+         timestamp: str,
+         conversation_history: list[DialogTurn],
+         param: ReplyParam,
     ) -> str | AsyncIterator[str]:
         """
-        Generate a reply as a supportive life coach based on the last user message.
+        Generate a reply as a supportive life coach, digital twin based on the last user's message.
 
         Args:
-            conversation_history (list[dict]): The conversation history.
+            conversation_history (list[DialogTurn]): The conversation history.
             system_prompt (Optional[str]): Custom prompt for fine-tuned response.
 
         Returns:
             str | AsyncIterator[str]: The AI-generated response.
         """
-        # Ensure conversation history exists
-        # TODO use a kg_query to generate a response
-        if not conversation_history or not isinstance(conversation_history, list):
-            return "I’d love to chat! What’s on your mind today? 😊"
-
+        # Reply Roles
+        role_user = os.getenv("REPLY_ROLE_USER")
+        role_assistant = os.getenv("REPLY_ROLE_ASSISTANT")
+       
         # Extract the last user message
-        last_message = None
-        for msg in reversed(conversation_history):
-            if msg.get("role") == "user":
-                last_message = msg.get("content")
-                break
-        # TODO use a kg_query to generate a response
-        if not last_message:
-            return "I’d love to hear more from you! How has your day been?"
+        # If this the first message, then look up the kg to derive an opener
+        if not content:
+            # TODO: Look up the KG to derive an opener
+            return " How has your day been?"
 
-        # Construct the prompt for LLM
-        reply_prompt = PROMPTS["coach_reply"].format(
-            history=json.dumps(conversation_history, indent=2),
-            last_message=last_message,
+        # Format conversation history to string
+        formatted_history = format_conversation_history(conversation_history)
+        logger.debug(f"Formatted conversation history:\n{formatted_history}")
+        # Detect missing keys (optional debug log)
+        missing_keys_report = find_missing_keys_in_history(conversation_history)
+        if missing_keys_report:
+            logger.warning(f"Missing keys detected in conversation history:\n" + "\n".join(missing_keys_report))
+
+
+        # Construct the prompt to capture the intent using formatted history
+        reply_prompt = PROMPTS[f"{role_assistant}_intent_classification"].format(
+            history=formatted_history,
+            last_message=content,
+        )
+        # Call LLM to generate response (assuming `llm_model_func` is available)
+        intent = await self.llm_model_func(reply_prompt)
+        logger.debug(f"Detected intent: {intent}")
+        # Call LLM to generate response (assuming `llm_model_func` is available)
+        response = await self.llm_model_func(reply_prompt)
+        # Construct the prompt for LLM using formatted history
+        reply_prompt = PROMPTS[f"{role_assistant}_reply"].format(
+            history=formatted_history,
+            last_message=content,
+            intent=intent,
         )
 
         # Call LLM to generate response (assuming `llm_model_func` is available)

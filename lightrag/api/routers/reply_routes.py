@@ -4,12 +4,14 @@ This module contains all reply-related routes for the LightRAG API.
 
 import json
 import logging
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Literal
 from fastapi import APIRouter, Depends, HTTPException, Header, Query, Request
 from ..utils_api import get_api_key_dependency, get_resolved_namespace, get_rag_from_app
 from pydantic import BaseModel, Field, field_validator
-
+from lightrag.base import ReplyParam
 from ascii_colors import trace_exception
+from dotenv import load_dotenv
+import os
 
 logger = logging.getLogger(__name__)
 router = APIRouter(tags=["reply"])
@@ -21,50 +23,216 @@ async def get_rag(
 ) -> Any:
     return await get_rag_from_app(request, namespace)
 
+# Reply Roles
+role_user = os.getenv("REPLY_ROLE_USER")
+role_assistant = os.getenv("REPLY_ROLE_ASSISTANT")
+
+
+class AISuggestion(BaseModel):
+    text: str
+    intent: Optional[str] = None
+    sentiment: Optional[str] = None
+    topic: Optional[str] = None
+    subTopic: Optional[str] = None
+    technique: Optional[str] = None
+    level: Optional[str] = None
+    confidence: Optional[float] = None
+
+class UserMessage(BaseModel):
+    speaker: Literal['student', 'patient']
+    content: str
+    timestamp: str
+    intent: Optional[str] = None
+    sentiment: Optional[str] = None
+    topic: Optional[str] = None
+    subTopic: Optional[str] = None
+    technique: Optional[str] = None
+    level: Optional[str] = None
+
+class CoachMessage(BaseModel):
+    speaker: Literal['coach', 'doctor']
+    content: Optional[str] = None
+    aiSuggestions: Optional[List[AISuggestion]] = None
+    selectedSuggestionIndex: Optional[int] = None
+    isFinalized: bool
+    timestamp: str
+
+class DialogTurn(BaseModel):
+    userMessage: UserMessage
+    coachMessage: Optional[CoachMessage] = None
 
 class ReplyRequest(BaseModel):
-    last_message: str = Field(
-        min_length=1,
-        description="The last message from the student to generate a reply.",
-    )
-
     student_name: Optional[str] = Field(
         default=None,
         description="Optional student name to personalize the response.",
     )
-
-    include_history: Optional[bool] = Field(
-        default=True,
-        description="Whether to include conversation history in reply generation.",
+    speaker: Literal["student"] = Field(
+        default="student",
+        description="Speaker role of the current message which is always the student.  A coach response is never sent."
     )
 
-    conversation_history: List[Dict[str, Any]] = Field(
-        default=...,
-        description="Stores past conversation history to maintain context.",
+    content: str = Field(
+        ...,
+        description="The current user's message content."
     )
 
-    @field_validator("last_message", mode="after")
-    @classmethod
-    def last_message_strip_after(cls, last_message: str) -> str:
-        return last_message.strip()
+    timestamp: str = Field(
+        ...,
+        description="Timestamp of the current message."
+    )
+    topic: Optional[str] = Field(
+        default=None,
+        description="Topic of the desired response.",
+    )
 
-    @field_validator("conversation_history", mode="after")
-    @classmethod
-    def conversation_history_check(
-        cls, conversation_history: List[Dict[str, Any]]
-    ) -> List[Dict[str, Any]]:
-        for msg in conversation_history:
-            if "role" not in msg or msg["role"] not in {"user", "assistant"}:
-                raise ValueError(
-                    "Each message must have a 'role' key with value 'user' or 'assistant'."
-                )
-        return conversation_history
+    sub_topic: Optional[str] = Field(
+        default=None,
+        description="Sub-topic of the desired response.",
+    )
 
+    intent: Optional[str] = Field(
+        default=None,
+        description="Intent of the desired response to capture emoution, expereince, guidance.",
+    )
+
+    sentiment: Optional[str] = Field(
+        default=None,
+        description="Sentiment of the desired response.",
+    )
+
+    technique: Optional[str] = Field(
+        default=None,
+        description="Technique of the desired response.",
+    )
+
+    level: Optional[str] = Field(
+        default=None,
+        description="Level of the desired response.",
+    )
+
+    mode: Literal["local", "global", "hybrid", "naive", "mix"] = Field(
+        default="hybrid",
+        description="Query mode",
+    )
+
+    only_need_context: Optional[bool] = Field(
+        default=None,
+        description="If True, only returns the retrieved context without generating a response.",
+    )
+
+    only_need_prompt: Optional[bool] = Field(
+        default=None,
+        description="If True, only returns the generated prompt without producing a response.",
+    )
+
+    top_k: Optional[int] = Field(
+        ge=1,
+        default=None,
+        description="Number of top items to retrieve.",
+    )
+
+    max_token_for_text_unit: Optional[int] = Field(
+        gt=1,
+        default=None,
+        description="Maximum number of tokens allowed for each retrieved text chunk.",
+    )
+
+    max_token_for_global_context: Optional[int] = Field(
+        gt=1,
+        default=None,
+        description="Maximum number of tokens allocated for relationship descriptions in global retrieval.",
+    )
+
+    max_token_for_local_context: Optional[int] = Field(
+        gt=1,
+        default=None,
+        description="Maximum number of tokens allocated for entity descriptions in local retrieval.",
+    )
+
+    hl_keywords: Optional[List[str]] = Field(
+        default=None,
+        description="List of high-level keywords to prioritize in retrieval.",
+    )
+
+    ll_keywords: Optional[List[str]] = Field(
+        default=None,
+        description="List of low-level keywords to refine retrieval focus.",
+    )
+
+    history_turns: Optional[int] = Field(
+        default=None,
+        description="Number of historical dialog turns to consider.",
+    )
+    conversation_history: List[DialogTurn] = Field(
+       default_factory=lambda: [
+        DialogTurn(
+            userMessage=UserMessage(
+                speaker="student",
+                content="I'm falling behind in math and I don't know what to do.",
+                timestamp="2025-03-13T10:00:00Z",
+                intent="Support",
+                sentiment="Concerned",
+                topic="Academics",
+                subTopic="Math",
+                technique="OpenEnded",
+                level="Trust"
+            ),
+            coachMessage=CoachMessage(
+                speaker="coach",
+                content="Let's figure out where you're struggling. Can you show me a problem that’s confusing?",
+                isFinalized=True,
+                selectedSuggestionIndex=-1,
+                timestamp="2025-03-13T10:01:00Z",
+                aiSuggestions=[
+                    AISuggestion(
+                        text="You're doing better than you think. Let's work on small wins together.",
+                        intent="Encouragement",
+                        sentiment="Supportive",
+                        topic="Motivation",
+                        subTopic="Self-Esteem",
+                        technique="Empathy",
+                        level="Trust",
+                        confidence=0.95
+                    ),
+                    AISuggestion(
+                        text="It's okay to feel overwhelmed. You're not alone, and I'm here to support you.",
+                        intent="Empathy",
+                        sentiment="Compassionate",
+                        topic="Emotional Support",
+                        subTopic="Stress",
+                        technique="Validation",
+                        level="Support",
+                        confidence=0.91
+                    )
+                ]
+            )
+        )
+    ],
+    description="Conversation history including user and coach dialog turns."
+    )   
+
+    @field_validator("hl_keywords", mode="after")
+    @classmethod
+    def hl_keywords_strip_after(cls, hl_keywords: List[str] | None) -> List[str] | None:
+        if hl_keywords is None:
+            return None
+        return [keyword.strip() for keyword in hl_keywords]
+
+    @field_validator("ll_keywords", mode="after")
+    @classmethod
+    def ll_keywords_strip_after(cls, ll_keywords: List[str] | None) -> List[str] | None:
+        if ll_keywords is None:
+            return None
+        return [keyword.strip() for keyword in ll_keywords]
+
+    def to_reply_params(self, is_stream: bool) -> "ReplyParam":
+        request_data = self.model_dump(exclude_none=True, exclude={"student_name","speaker","content","timestamp","conversation_history"})
+        param = ReplyParam(**request_data)
+        param.stream = is_stream
+        return param
 
 class ReplyResponse(BaseModel):
-    reply: str = Field(
-        description="The generated reply text.",
-    )
+    coachMessage: Optional[CoachMessage] = None
 
 def create_reply_routes(api_key: Optional[str] = None):
     optional_api_key = get_api_key_dependency(api_key)
@@ -77,10 +245,88 @@ async def reply_text(
     rag: Any = Depends(get_rag)
 ) -> ReplyResponse:
     """
+    Interaction model: Human-to-human dialog (e.g., student ↔ coach or patient ↔ doctor), with AI assisting the coach/doctor with suggested replies
+
     Handle a POST request at the /coach_reply endpoint to generate a life coach response.
     """
     try:
-        response_text = await rag.acoach_reply(request.conversation_history)
-        return ReplyResponse(reply=response_text)
+        param = request.to_reply_params(False)
+        coach_msg = await rag.acoach_reply(
+            student_name=request.student_name,
+            speaker=request.speaker,
+            content=request.content,
+            timestamp=request.timestamp,
+        conversation_history=[turn.model_dump() if isinstance(turn, DialogTurn) else turn for turn in request.conversation_history],
+            param=param
+        )
+        if isinstance(coach_msg, str):
+            logger.debug(f"Coach response: {coach_msg}")
+            coach_msg = CoachMessage(
+                speaker="coach",
+                content=coach_msg,
+                aiSuggestions=[],
+                selectedSuggestionIndex=-1,
+                isFinalized=False,
+                timestamp=request.timestamp
+            )
+
+        return ReplyResponse(
+            coachMessage=coach_msg
+        )
     except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+    
+@router.post("/coach_reply/stream")
+async def query_text_stream(
+    request: ReplyRequest,
+    rag: Any = Depends(get_rag),
+    ) -> ReplyResponse:
+    """
+    Human-to-human dialog (e.g., student ↔ coach or patient ↔ doctor), with AI assisting the coach/doctor with suggested replies
+
+    This endpoint performs a retrieval-augmented generation (RAG) reply and streams the response.
+
+    Args:
+        request (ReplyRequest): The request object containing the reply parameters.
+        optional_api_key (Optional[str], optional): An optional API key for authentication. Defaults to None.
+
+    Returns:
+        StreamingResponse: A streaming response containing the RAG query results.
+    """
+    try:
+        param = request.to_reply_params(True)
+        coach_msg = await rag.acoach_reply(
+            conversation_history=[turn.model_dump() if isinstance(turn, DialogTurn) else turn for turn in request.conversation_history],
+            student_name=request.student_name,
+            speaker=request.speaker,
+            content=request.content,
+            timestamp=request.timestamp,
+            param=param
+        )
+
+        from fastapi.responses import StreamingResponse
+
+        async def stream_generator():
+            try:
+                if coach_msg.aiSuggestions:
+                    for suggestion in coach_msg.aiSuggestions:
+                        yield f"{json.dumps({'reply': suggestion.text})}\n"
+                else:
+                    yield f"{json.dumps({'reply': ''})}\n"
+            except Exception as e:
+                logging.error(f"Streaming error: {str(e)}")
+                yield f"{json.dumps({'error': str(e)})}\n"
+
+        return StreamingResponse(
+            stream_generator(),
+            media_type="application/x-ndjson",
+            headers={
+                "Cache-Control": "no-cache",
+                "Connection": "keep-alive",
+                "Content-Type": "application/x-ndjson",
+                "X-Accel-Buffering": "no",
+            },
+        )
+    except Exception as e:
+        trace_exception(e)
         raise HTTPException(status_code=500, detail=str(e))

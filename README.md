@@ -21,3 +21,16 @@ http://localhost:9621/webui/
 	•	This version is configured specifically for PostgreSQL and Apache AGE.
 	•	Other configurations from the original LightRAG repo (e.g., JsonKVStorage, NetworkX, Neo4J) are deprecated and no longer supported.
 	•	Some legacy files remain in the repository from the original codebase but are no longer used. They will be removed in a future cleanup.
+
+
+
+/reply
+{
+  "student_name": "string",
+  "include_history": true,
+  "conversation_history": [
+    {"role": "counselor", "context": "Hey student"},
+    {"role": "student", "context": "Hi counselor"},
+    {"role": "counselor", "context": "Lets talk about the course work"},
+  ]
+}

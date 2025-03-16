@@ -154,6 +154,7 @@ def create_query_routes(api_key: Optional[str] = None, top_k: int = 60):
     )
     async def query_text(request: QueryRequest, rag: LightRAG = Depends(get_rag),):
         """
+        Interaction model: Traditional 1-on-1 user ↔ AI Agent aka assistant
         Handle a POST request at the /query endpoint to process user queries using RAG capabilities.
 
         Parameters:
@@ -185,8 +186,11 @@ def create_query_routes(api_key: Optional[str] = None, top_k: int = 60):
             raise HTTPException(status_code=500, detail=str(e))
 
     @router.post("/query/stream", dependencies=[Depends(optional_api_key)])
-    async def query_text_stream(request: QueryRequest, rag: LightRAG = Depends(get_rag),):
+    async def query_text_stream(
+        request: QueryRequest,
+        rag: LightRAG = Depends(get_rag),):
         """
+        Interaction model: Traditional 1-on-1 user ↔ AI Agent aka assistant
         This endpoint performs a retrieval-augmented generation (RAG) query and streams the response.
 
         Args:

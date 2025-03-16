@@ -42,6 +42,9 @@ function TabsNavigation() {
         <NavigationTab value="retrieval" currentTab={currentTab}>
           Retrieval
         </NavigationTab>
+        <NavigationTab value="reply" currentTab={currentTab}>
+          Reply
+        </NavigationTab>
         <NavigationTab value="api" currentTab={currentTab}>
           API
         </NavigationTab>

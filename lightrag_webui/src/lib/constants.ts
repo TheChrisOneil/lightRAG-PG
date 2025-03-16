@@ -25,6 +25,9 @@ export const healthCheckInterval = 15 // seconds
 
 export const defaultQueryLabel = '*'
 
+export const defaultReplyLabel = '*'
+
+
 // reference: https://developer.mozilla.org/en-US/docs/Web/HTTP/MIME_types/Common_types
 export const supportedFileTypes = {
   'text/plain': [

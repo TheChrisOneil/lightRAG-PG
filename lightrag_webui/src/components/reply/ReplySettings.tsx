@@ -1,5 +1,5 @@
 import { useCallback } from 'react'
-import { QueryRequest } from '@/api/lightrag'
+import { ReplyRequest, QueryRequest } from '@/api/lightrag'
 import Text from '@/components/ui/Text'
 import Input from '@/components/ui/Input'
 import Checkbox from '@/components/ui/Checkbox'
@@ -7,10 +7,17 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { useSettingsStore } from '@/stores/settings'
 
 export default function ReplySettings() {
+  // Update namespace in query settings
   const querySettings = useSettingsStore((state) => state.querySettings)
-
-  const handleChange = useCallback((key: keyof QueryRequest, value: any) => {
+  const handleQueryChange = useCallback((key: keyof QueryRequest, value: any) => {
     useSettingsStore.getState().updateQuerySettings({ [key]: value })
+  }, [])  
+
+  // Update reply settings
+  const replySettings = useSettingsStore((state) => state.replySettings)
+
+  const handleChange = useCallback((key: keyof ReplyRequest, value: any) => {
+    useSettingsStore.getState().updateReplySettings({ [key]: value })
   }, [])
 
   return (
@@ -33,7 +40,7 @@ export default function ReplySettings() {
               id="namespace"
               type="text"
               value={querySettings.namespace ?? ''}
-              onChange={(e) => handleChange('namespace', e.target.value)}
+              onChange={(e) => handleQueryChange('namespace', e.target.value)}
               placeholder="Enter namespace"
             />
 
@@ -46,7 +53,7 @@ export default function ReplySettings() {
             <Input
               id="student_name"
               type="text"
-              value={querySettings.student_name ?? ''}
+              value={replySettings.student_name ?? ''}
               onChange={(e) => handleChange('student_name', e.target.value)}
               placeholder="Enter student name"
             />
@@ -58,21 +65,162 @@ export default function ReplySettings() {
               side="left"
             />
 
-            <div className="flex items-center gap-2">
-              <Text
-                className="ml-1"
-                text="Include History"
-                tooltip="Include prior conversation history in the request"
-                side="left"
-              />
-              <div className="grow" />
-              <Checkbox
-                className="mr-1 cursor-pointer"
-                id="include_history"
-                checked={querySettings.include_history}
-                onCheckedChange={(checked) => handleChange('include_history', checked)}
-              />
-            </div>
+            <Text
+              className="ml-1"
+              text="Mode"
+              tooltip="Query mode (local, global, hybrid, naive, mix)"
+              side="left"
+            />
+            <Input
+              id="mode"
+              type="text"
+              value={replySettings.mode ?? ''}
+              onChange={(e) => handleChange('mode', e.target.value)}
+              placeholder="Enter mode"
+            />
+
+            <Text
+              className="ml-1"
+              text="Only Need Context"
+              tooltip="Only return retrieved context"
+              side="left"
+            />
+            <Checkbox
+              className="mr-1 cursor-pointer"
+              id="only_need_context"
+              checked={replySettings.only_need_context}
+              onCheckedChange={(checked) => handleChange('only_need_context', checked)}
+            />
+
+            <Text
+              className="ml-1"
+              text="Only Need Prompt"
+              tooltip="Only return generated prompt"
+              side="left"
+            />
+            <Checkbox
+              className="mr-1 cursor-pointer"
+              id="only_need_prompt"
+              checked={replySettings.only_need_prompt}
+              onCheckedChange={(checked) => handleChange('only_need_prompt', checked)}
+            />
+
+            <Text className="ml-1" text="Topic" side="left" />
+            <Input
+              id="topic"
+              type="text"
+              value={replySettings.topic ?? ''}
+              onChange={(e) => handleChange('topic', e.target.value)}
+              placeholder="Enter topic"
+            />
+
+            <Text className="ml-1" text="Sub Topic" side="left" />
+            <Input
+              id="sub_topic"
+              type="text"
+              value={replySettings.sub_topic ?? ''}
+              onChange={(e) => handleChange('sub_topic', e.target.value)}
+              placeholder="Enter sub topic"
+            />
+
+            <Text className="ml-1" text="Intent" side="left" />
+            <Input
+              id="intent"
+              type="text"
+              value={replySettings.intent ?? ''}
+              onChange={(e) => handleChange('intent', e.target.value)}
+              placeholder="Enter intent"
+            />
+
+            <Text className="ml-1" text="Sentiment" side="left" />
+            <Input
+              id="sentiment"
+              type="text"
+              value={replySettings.sentiment ?? ''}
+              onChange={(e) => handleChange('sentiment', e.target.value)}
+              placeholder="Enter sentiment"
+            />
+
+            <Text className="ml-1" text="Technique" side="left" />
+            <Input
+              id="technique"
+              type="text"
+              value={replySettings.technique ?? ''}
+              onChange={(e) => handleChange('technique', e.target.value)}
+              placeholder="Enter technique"
+            />
+
+            <Text className="ml-1" text="Level" side="left" />
+            <Input
+              id="level"
+              type="text"
+              value={replySettings.level ?? ''}
+              onChange={(e) => handleChange('level', e.target.value)}
+              placeholder="Enter level"
+            />
+
+            <Text className="ml-1" text="Top K" side="left" />
+            <Input
+              id="top_k"
+              type="number"
+              value={replySettings.top_k ?? ''}
+              onChange={(e) => handleChange('top_k', Number(e.target.value))}
+              placeholder="Enter top_k"
+            />
+
+            <Text className="ml-1" text="Max Tokens Text Unit" side="left" />
+            <Input
+              id="max_token_for_text_unit"
+              type="number"
+              value={replySettings.max_token_for_text_unit ?? ''}
+              onChange={(e) => handleChange('max_token_for_text_unit', Number(e.target.value))}
+              placeholder="Enter max tokens for text unit"
+            />
+
+            <Text className="ml-1" text="Max Tokens Global Context" side="left" />
+            <Input
+              id="max_token_for_global_context"
+              type="number"
+              value={replySettings.max_token_for_global_context ?? ''}
+              onChange={(e) => handleChange('max_token_for_global_context', Number(e.target.value))}
+              placeholder="Enter max tokens for global context"
+            />
+
+            <Text className="ml-1" text="Max Tokens Local Context" side="left" />
+            <Input
+              id="max_token_for_local_context"
+              type="number"
+              value={replySettings.max_token_for_local_context ?? ''}
+              onChange={(e) => handleChange('max_token_for_local_context', Number(e.target.value))}
+              placeholder="Enter max tokens for local context"
+            />
+
+            <Text className="ml-1" text="High-Level Keywords" side="left" />
+            <Input
+              id="hl_keywords"
+              type="text"
+              value={replySettings.hl_keywords?.join(', ') ?? ''}
+              onChange={(e) => handleChange('hl_keywords', e.target.value.split(',').map((k) => k.trim()))}
+              placeholder="Comma-separated keywords"
+            />
+
+            <Text className="ml-1" text="Low-Level Keywords" side="left" />
+            <Input
+              id="ll_keywords"
+              type="text"
+              value={replySettings.ll_keywords?.join(', ') ?? ''}
+              onChange={(e) => handleChange('ll_keywords', e.target.value.split(',').map((k) => k.trim()))}
+              placeholder="Comma-separated keywords"
+            />
+
+            <Text className="ml-1" text="History Turns" side="left" />
+            <Input
+              id="history_turns"
+              type="number"
+              value={replySettings.history_turns ?? ''}
+              onChange={(e) => handleChange('history_turns', Number(e.target.value))}
+              placeholder="Enter number of turns"
+            />
 
           </div>
         </div>

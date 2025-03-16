@@ -329,7 +329,7 @@ def create_app(args):
     
     # Async version includes initialization and eviction logic
     async def async_rag_factory(namespace_prefix="default") -> LightRAG:
-        MAX_RAG_INSTANCES = int(os.getenv("MAX_RAG_INSTANCES", 100))
+        MAX_RAG_INSTANCES = int(os.getenv("MAX_RAG_INSTANCES", 2))
         if not hasattr(app.state, "rag_instances"):
             app.state.rag_instances = {}
         if not hasattr(app.state, "rag_instance_order"):

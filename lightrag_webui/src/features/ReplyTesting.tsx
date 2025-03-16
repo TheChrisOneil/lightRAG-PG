@@ -1,131 +1,371 @@
 import Input from '@/components/ui/Input'
 import Button from '@/components/ui/Button'
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { queryText, queryTextStream, Message } from '@/api/lightrag'
+import { coachReplyText, coachReplyTextStream, ReplyRequest, DialogTurn, CoachMessage, UserMessage } from '@/api/lightrag'
 import { errorMessage } from '@/lib/utils'
 import { useSettingsStore } from '@/stores/settings'
 import { useDebounce } from '@/hooks/useDebounce'
-import QuerySettings from '@/components/reply/ReplySettings'
-import { ChatMessage, MessageWithError } from '@/components/retrieval/ChatMessage'
-import { EraserIcon, SendIcon } from 'lucide-react'
+import ReplySettings from '../components/reply/ReplySettings'
+import { EraserIcon } from 'lucide-react'
+import { ConversationStartInstructions, ConversationContinueInstructions } from '@/components/reply/ChatMessage'
+
 
 export default function ReplyTesting() {
-  const [messages, setMessages] = useState<MessageWithError[]>(
-    () => useSettingsStore.getState().retrievalHistory || []
-  )
-  const [inputValue, setInputValue] = useState('')
+  const messages = useSettingsStore((state) => state.dialogTurns)
+  const setMessages = useSettingsStore((state) => state.setDialogTurns)
+
   const [isLoading, setIsLoading] = useState(false)
+  const [editingIndex, setEditingIndex] = useState<number | null>(null)
+  const [editValue, setEditValue] = useState('')
+  const [conversationStarted, setConversationStarted] = useState(messages.length > 0);
   const messagesEndRef = useRef<HTMLDivElement>(null)
+
 
   const scrollToBottom = useCallback(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [])
 
-  const handleSubmit = useCallback(
-    async (e: React.FormEvent) => {
-      e.preventDefault()
-      if (!inputValue.trim() || isLoading) return
+  // const handleConversation = async (selectedSpeaker: 'student' | 'coach', initialContent: string) => {
+  //   const state = useSettingsStore.getState()
+  //   const timestamp = new Date().toISOString()
+  //   console.log('Starting conversation as:', selectedSpeaker)
+  //   if (selectedSpeaker === 'coach') {
+  //     // If coach initiates a conversation the dialog turn is complete
+  //     // The dialog turn is created with only the coach message
+  //     // and no user message and now send to the API for a student response.
+  //     const coachMsg: CoachMessage = {
+  //       speaker: selectedSpeaker,
+  //       content: initialContent,
+  //       isFinalized: true,
+  //       aiSuggestions: [],
+  //       selectedSuggestionIndex: -1,
+  //       timestamp,
+  //     }
 
-      // Create reply test messages
-      const userMessage: Message = {
-        content: inputValue,
-        role: 'user'
+  //     const dialogTurn: DialogTurn = {
+  //       coachMessage: coachMsg,
+  //     }
+
+  //     setMessages([...messages, dialogTurn])
+  //     return
+  //   }
+
+  //   // If student initiates or continues a conversation
+  //   // Create a new dialog turn with the student message
+  //   // and sent to the API for a coaches response
+  //   const userMsg: UserMessage = {
+  //     speaker: selectedSpeaker,
+  //     content: initialContent,
+  //     timestamp,
+  //     intent: state.replySettings.intent,
+  //     sentiment: state.replySettings.sentiment,
+  //     topic: state.replySettings.topic,
+  //     subTopic: state.replySettings.sub_topic,
+  //     technique: state.replySettings.technique,
+  //     level: state.replySettings.level,
+  //   }
+
+  //   const updatedMessages = [...messages]
+  //   const dialogTurn: DialogTurn = {
+  //     userMessage: userMsg
+  //   }
+  //   updatedMessages.push(dialogTurn)
+    
+  //   const replyRequest: ReplyRequest = {
+  //     ...state.replySettings,
+  //     speaker: selectedSpeaker,  // student
+  //     content: initialContent, // it can be initial message or follow-up message
+  //     timestamp,
+  //     conversation_history: updatedMessages,
+  //   }
+
+  //   try {
+  //     if (state.replySettings.stream) {
+  //       await coachReplyTextStream(
+  //         replyRequest,
+  //         (chunk: string) => {
+  //           const response = JSON.parse(chunk) as { coachMessage: CoachMessage }
+  //           const currentMessages = useSettingsStore.getState().dialogTurns
+  //           const updated = [...currentMessages]
+  //           const lastTurn = updated[updated.length - 1]
+  //           console.log('Stream response:', response)
+  //           if (!lastTurn) return
+  //           const updatedTurn: DialogTurn = {
+  //             ...lastTurn,
+  //             coachMessage: {
+  //               ...response.coachMessage,
+  //               speaker: response.coachMessage.speaker || 'coach',
+  //             }
+  //           }
+  //           updated[updated.length - 1] = updatedTurn
+  //           setMessages(updated)
+  //         },
+  //       )
+  //     } else {
+  //       const response = await coachReplyText(replyRequest)
+  //       console.log('Response:', response)
+  //       const currentMessages = useSettingsStore.getState().dialogTurns
+  //       const updated = [...currentMessages]
+  //       const last = updated[updated.length - 1]
+  //       if (last) {
+  //         const updatedTurn: DialogTurn = {
+  //           ...last,
+  //           coachMessage: {
+  //             speaker: response.coachMessage?.speaker || 'coach',
+  //             content: response.coachMessage?.content || '',
+  //             aiSuggestions: response.coachMessage?.aiSuggestions || [],
+  //             selectedSuggestionIndex: response.coachMessage?.selectedSuggestionIndex || -1,
+  //             isFinalized: response.coachMessage?.isFinalized || false,
+  //             timestamp: response.coachMessage?.timestamp || new Date().toISOString(),
+  //           }
+  //         }
+  //         updated[updated.length - 1] = updatedTurn
+  //       }
+  //       setMessages(updated)
+  //     }
+  //   } catch (err) {
+  //     const updated = [...messages]
+  //     const last = updated[updated.length - 1]
+  //     if (last.coachMessage) {
+  //       last.coachMessage.content = `\nError: Failed to get response\n${errorMessage(err)}`
+  //     }
+  //     setMessages(updated)
+  //   } finally {
+  //     setIsLoading(false)
+  //   }
+  // }
+
+  const handleConversation = async (selectedSpeaker: 'student' | 'coach', initialContent: string) => {
+    const state = useSettingsStore.getState()
+    setIsLoading(true)
+  
+    // Always read from store to avoid stale data
+    const updatedMessages = [...state.dialogTurns]
+    const timestamp = new Date().toISOString()
+    console.log('Starting conversation as:', selectedSpeaker)
+  
+    if (selectedSpeaker === 'coach') {
+      // If coach initiates conversation
+      const coachMsg: CoachMessage = {
+        speaker: 'coach',
+        content: initialContent,
+        timestamp,
+        aiSuggestions: [],
+        selectedSuggestionIndex: -1,
+        isFinalized: true,
       }
-
-      const assistantMessage: Message = {
-        content: '',
-        role: 'assistant'
-      }
-
-      const prevMessages = [...messages]
-
-      // Add messages to chatbox
-      setMessages([...prevMessages, userMessage, assistantMessage])
-
-      // Clear input and set loading
-      setInputValue('')
-      setIsLoading(true)
-
-      // Create a function to update the assistant's message
-      const updateAssistantMessage = (chunk: string, isError?: boolean) => {
-        assistantMessage.content += chunk
-        setMessages((prev) => {
-          const newMessages = [...prev]
-          const lastMessage = newMessages[newMessages.length - 1]
-          if (lastMessage.role === 'assistant') {
-            lastMessage.content = assistantMessage.content
-            lastMessage.isError = isError
-          }
-          return newMessages
-        })
-      }
-
-      // Prepare query parameters
-      const state = useSettingsStore.getState()
-      const queryParams = {
-        ...state.querySettings,
-        query: userMessage.content,
-        conversation_history: prevMessages
-          .filter((m) => m.isError !== true)
-          .map((m) => ({ role: m.role, content: m.content }))
-      }
-
-      try {
-        // Run query
-        if (state.querySettings.stream) {
-          let errorMessage = ''
-          await queryTextStream(queryParams, updateAssistantMessage, (error) => {
-            errorMessage += error
-          })
-          if (errorMessage) {
-            if (assistantMessage.content) {
-              errorMessage = assistantMessage.content + '\n' + errorMessage
+      // Create a brand-new turn with only a coach message
+      updatedMessages.push({ coachMessage: coachMsg })
+      setMessages(updatedMessages)
+      setIsLoading(false)
+      return
+    }
+  
+    // Otherwise, student initiates or continues conversation
+    const userMsg: UserMessage = {
+      speaker: 'student',
+      content: initialContent,
+      timestamp,
+      intent: state.replySettings.intent,
+      sentiment: state.replySettings.sentiment,
+      topic: state.replySettings.topic,
+      subTopic: state.replySettings.sub_topic,
+      technique: state.replySettings.technique,
+      level: state.replySettings.level,
+    }
+  
+    // Create a new turn with user message
+    updatedMessages.push({ userMessage: userMsg })
+    setMessages(updatedMessages)
+  
+    const replyRequest: ReplyRequest = {
+      ...state.replySettings,
+      speaker: 'student',
+      content: initialContent,
+      timestamp,
+      conversation_history: updatedMessages,
+    }
+  
+    try {
+      if (state.replySettings.stream) {
+        // Streaming scenario
+        await coachReplyTextStream(
+          replyRequest,
+          (chunk: string) => {
+            const response = JSON.parse(chunk) as { coachMessage: CoachMessage }
+            const currentMessages = [...useSettingsStore.getState().dialogTurns]
+            const lastTurn = currentMessages[currentMessages.length - 1]
+            if (!lastTurn) return
+            lastTurn.coachMessage = {
+              ...response.coachMessage,
+              speaker: response.coachMessage.speaker || 'coach',
             }
-            updateAssistantMessage(errorMessage, true)
+            setMessages(currentMessages)
+          }
+        )
+      } else {
+        // Non-stream scenario
+        const response = await coachReplyText(replyRequest)
+        console.log('Response:', response)
+  
+        const currentMessages = [...useSettingsStore.getState().dialogTurns]
+        const lastTurn = currentMessages[currentMessages.length - 1]
+        if (lastTurn) {
+          lastTurn.coachMessage = {
+            speaker: response.coachMessage?.speaker || 'coach',
+            content: response.coachMessage?.content || '',
+            aiSuggestions: response.coachMessage?.aiSuggestions || [],
+            selectedSuggestionIndex: response.coachMessage?.selectedSuggestionIndex ?? -1,
+            isFinalized: response.coachMessage?.isFinalized ?? false,
+            timestamp: response.coachMessage?.timestamp || new Date().toISOString(),
+          }
+          setMessages(currentMessages)
+        }
+      }
+    } catch (err) {
+      // Error scenario
+      const currentMessages = [...useSettingsStore.getState().dialogTurns]
+      const lastTurn = currentMessages[currentMessages.length - 1]
+      if (lastTurn) {
+        if (!lastTurn.coachMessage) {
+          lastTurn.coachMessage = {
+            speaker: 'coach',
+            content: `\nError: Failed to get response\n${errorMessage(err)}`,
+            aiSuggestions: [],
+            selectedSuggestionIndex: -1,
+            isFinalized: false,
+            timestamp,
           }
         } else {
-          const response = await queryText(queryParams)
-          updateAssistantMessage(response.response)
+          lastTurn.coachMessage.content = `\nError: Failed to get response\n${errorMessage(err)}`
         }
-      } catch (err) {
-        // Handle error
-        updateAssistantMessage(`Error: Failed to get response\n${errorMessage(err)}`, true)
-      } finally {
-        // Clear loading and add messages to state
-        setIsLoading(false)
-        useSettingsStore
-          .getState()
-          .setRetrievalHistory([...prevMessages, userMessage, assistantMessage])
+        setMessages(currentMessages)
       }
-    },
-    [inputValue, isLoading, messages, setMessages]
-  )
+    } finally {
+      setIsLoading(false)
+    }
+  }
 
   const debouncedMessages = useDebounce(messages, 100)
+  useEffect(() => {
+    if (messages.length > 0 && !conversationStarted) {
+      setConversationStarted(true);
+    }
+  }, [messages, conversationStarted]);
   useEffect(() => scrollToBottom(), [debouncedMessages, scrollToBottom])
 
   const clearMessages = useCallback(() => {
     setMessages([])
-    useSettingsStore.getState().setRetrievalHistory([])
+    setConversationStarted(false)
   }, [setMessages])
 
   return (
     <div className="flex size-full gap-2 px-2 pb-12">
       <div className="flex grow flex-col gap-4">
+        {!conversationStarted ? (
+          <ConversationStartInstructions conversationHistory={messages} onSubmit={handleConversation} />
+        ) : (
+          <ConversationContinueInstructions
+            lastSpeaker={messages.length > 0 && messages[messages.length - 1].coachMessage?.content ? 'coach' : 'student'}
+            onSubmit={handleConversation}
+          />
+        )}
         <div className="relative grow">
           <div className="bg-primary-foreground/60 absolute inset-0 flex flex-col overflow-auto rounded-lg border p-2">
             <div className="flex min-h-0 flex-1 flex-col gap-2">
               {messages.length === 0 ? (
                 <div className="text-muted-foreground flex h-full items-center justify-center text-lg">
-                  Start a reply test by typing a message below
+                  You can start the conversation either as a student or a coach by entering a message above.
                 </div>
               ) : (
                 messages.map((message, idx) => (
-                  <div
-                    key={idx}
-                    className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
-                  >
-                    {<ChatMessage message={message} />}
+                  <div key={idx} className="flex flex-col gap-1 w-full">
+                    {message.userMessage?.content && (
+                      <>
+                        <div className="text-sm font-semibold text-right text-blue-800">
+                          {message.userMessage?.speaker?.toUpperCase?.() || 'UNKNOWN'}
+                        </div>
+                        <div className="rounded p-2 bg-blue-100 self-end">
+                          {message.userMessage.content}
+                        </div>
+                      </>
+                    )}
+
+                    {message.coachMessage?.content && (
+                      <>
+                        <div className="text-sm font-semibold text-left text-green-800">
+                          {message.coachMessage.speaker.toUpperCase()}
+                        </div>
+                        <div className="rounded p-2 bg-gray-100 self-start">
+                          {message.coachMessage.content}
+                        </div>
+                      </>
+                    )}
+
+                    {message.coachMessage && !message.coachMessage.content && (
+                      <div className="text-xs italic text-muted-foreground ml-2">
+                        {message.coachMessage.isFinalized ? (
+                          <>Final Reply: {message.coachMessage.content}</>
+                        ) : editingIndex === idx ? (
+                          <>
+                            <Input
+                              className="mb-1"
+                              value={editValue}
+                              onChange={(e) => setEditValue(e.target.value)}
+                            />
+                            <div className="flex gap-2">
+                              <Button
+                                size="sm"
+                                onClick={() => {
+                                  const updated = [...messages]
+                                  updated[idx].coachMessage!.content = editValue
+                                  updated[idx].coachMessage!.isFinalized = true
+                                  setMessages(updated)
+                                  setEditingIndex(null)
+                                  setEditValue('')
+                                }}
+                              >
+                                Approve
+                              </Button>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => {
+                                  setEditingIndex(null)
+                                  setEditValue('')
+                                }}
+                              >
+                                Cancel
+                              </Button>
+                            </div>
+                          </>
+                        ) : (
+                          <>
+                            {message.coachMessage.aiSuggestions?.length ? (
+                              <>
+                                <div className="mb-1">AI Suggestions:</div>
+                                <ul className="ml-4 list-disc text-muted-foreground text-xs">
+                                  {message.coachMessage.aiSuggestions.map((option, i) => (
+                                    <li key={i}>{option.text}</li>
+                                  ))}
+                                </ul>
+                                <div className="flex gap-2 mt-2">
+                                  <Button
+                                    size="sm"
+                                    onClick={() => {
+                                      setEditingIndex(idx)
+                                      setEditValue(message.coachMessage?.aiSuggestions?.[0]?.text || '')
+                                    }}
+                                  >
+                                    Edit & Approve
+                                  </Button>
+                                </div>
+                              </>
+                            ) : null}
+                          </>
+                        )}
+                      </div>
+                    )}
                   </div>
                 ))
               )}
@@ -134,7 +374,7 @@ export default function ReplyTesting() {
           </div>
         </div>
 
-        <form onSubmit={handleSubmit} className="flex shrink-0 items-center gap-2">
+        <div className="flex shrink-0 items-center gap-2">
           <Button
             type="button"
             variant="outline"
@@ -145,20 +385,10 @@ export default function ReplyTesting() {
             <EraserIcon />
             Clear
           </Button>
-          <Input
-            className="flex-1"
-            value={inputValue}
-            onChange={(e) => setInputValue(e.target.value)}
-            placeholder="Type your message to the coach..."
-            disabled={isLoading}
-          />
-          <Button type="submit" variant="default" disabled={isLoading} size="sm">
-            <SendIcon />
-            Send
-          </Button>
-        </form>
+          {/* Follow-up replies are handled dynamically via AI suggestions. */}
+        </div>
       </div>
-      <QuerySettings />
+      <ReplySettings />
     </div>
   )
 }

@@ -2,7 +2,6 @@ import axios, { AxiosError } from 'axios'
 import { backendBaseUrl } from '@/lib/constants'
 import { errorMessage } from '@/lib/utils'
 import { useSettingsStore } from '@/stores/settings'
-
 // Types
 export type LightragNodeType = {
   id: string
@@ -60,7 +59,21 @@ export type LightragDocumentsScanProgress = {
  */
 export type QueryMode = 'naive' | 'local' | 'global' | 'hybrid' | 'mix'
 
+/**
+ * The Message is focused on the user and the assistant is AI Agent
+ * user is the student, patient, the digital twin, etc. 
+ */
 export type Message = {
+  role: 'user' | 'assistant' | 'system'
+  content: string
+}
+
+/**
+ * The Reply is focused on the assistant who leverages the AI Agent to create a reply to the user
+ * user is the student, patient, the digital twin, etc
+ * assistant is the coach, the doctor, the AI, etc
+*/
+export type Reply = {
   role: 'user' | 'assistant' | 'system'
   content: string
 }
@@ -102,6 +115,71 @@ export type QueryRequest = {
 
 export type QueryResponse = {
   response: string
+}
+
+type AISuggestion = {
+  text: string
+  intent?: string
+  sentiment?: string
+  topic?: string
+  subTopic?: string
+  technique?: string
+  level?: string
+  confidence?: number
+}
+
+export type ReplyRequest = {
+  student_name?: string
+  speaker: 'student' | 'patient'
+  content: string
+  timestamp: string
+  topic?: string
+  sub_topic?: string
+  intent?: string
+  sentiment?: string
+  technique?: string
+  level?: string
+  mode: QueryMode
+  only_need_context?: boolean
+  only_need_prompt?: boolean
+  top_k?: number
+  max_token_for_text_unit?: number
+  max_token_for_global_context?: number
+  max_token_for_local_context?: number
+  hl_keywords?: string[]
+  ll_keywords?: string[]
+  history_turns?: number
+  conversation_history?: DialogTurn[]
+}
+
+export type ReplyResponse = {
+  coachMessage?: CoachMessage
+}
+
+export type CoachMessage = {
+  speaker: 'coach' | 'doctor'
+  content?: string
+  aiSuggestions?: AISuggestion[]
+  selectedSuggestionIndex?: number
+  isFinalized: boolean
+  timestamp: string
+}
+
+export type UserMessage = {
+  speaker: 'student' | 'patient'
+  content?: string // student or paitne experiencial, emoutional, skill, knowledge, etc content
+  intent?: string
+  sentiment?: string
+  topic?: string
+  subTopic?: string
+  technique?: string
+  level?: string
+  timestamp: string
+}
+
+export type DialogTurn = {
+  userMessage?: UserMessage
+  coachMessage?: CoachMessage
 }
 
 export type DocActionResponse = {
@@ -323,4 +401,71 @@ export const batchUploadDocuments = async (
 export const clearDocuments = async (): Promise<DocActionResponse> => {
   const response = await axiosInstance.delete('/documents')
   return response.data
+}
+
+export const coachReplyText = async (request: ReplyRequest): Promise<ReplyResponse> => {
+  const response = await axiosInstance.post('/coach_reply', request)
+  return response.data
+}
+
+export const coachReplyTextStream = async (
+  request: ReplyRequest,
+  onChunk: (chunk: string) => void,
+  onError?: (error: string) => void
+) => {
+  try {
+    let buffer = ''
+    await axiosInstance
+      .post('/coach_reply/stream', request, {
+        responseType: 'text',
+        headers: {
+          Accept: 'application/x-ndjson'
+        },
+        transformResponse: [
+          (data: string) => {
+            buffer += data
+            const lines = buffer.split('\n')
+            buffer = lines.pop() || ''
+
+            for (const line of lines) {
+              if (line.trim()) {
+                try {
+                  const parsed = JSON.parse(line)
+                  if (parsed.response) {
+                    onChunk(parsed.response)
+                  } else if (parsed.error && onError) {
+                    onError(parsed.error)
+                  }
+                } catch (e) {
+                  console.error('Error parsing stream chunk:', e)
+                  if (onError) onError('Error parsing server response')
+                }
+              }
+            }
+            return data
+          }
+        ]
+      })
+      .catch((error) => {
+        if (onError) onError(errorMessage(error))
+      })
+
+    if (buffer.trim()) {
+      try {
+        const parsed = JSON.parse(buffer)
+        if (parsed.response) {
+          onChunk(parsed.response)
+        } else if (parsed.error && onError) {
+          onError(parsed.error)
+        }
+      } catch (e) {
+        console.error('Error parsing final chunk:', e)
+        if (onError) onError('Error parsing server response')
+      }
+    }
+  } catch (error) {
+    const message = errorMessage(error)
+    console.error('Stream request failed:', message)
+    if (onError) onError(message)
+  }
 }

@@ -1,11 +1,38 @@
+import { defaultQueryLabel, defaultReplyLabel } from './../lib/constants';
 import { create } from 'zustand'
 import { persist, createJSONStorage } from 'zustand/middleware'
 import { createSelectors } from '@/lib/utils'
-import { defaultQueryLabel } from '@/lib/constants'
 import { Message, QueryRequest } from '@/api/lightrag'
+import type { DialogTurn} from '@/api/lightrag'
+
+
+
+
+export interface ReplyParams {
+  topic?: string
+  sub_topic?: string
+  intent?: string
+  sentiment?: string
+  technique?: string
+  level?: string
+  mode: 'local' | 'global' | 'hybrid' | 'naive' | 'mix'
+  only_need_context?: boolean
+  only_need_prompt?: boolean
+  top_k?: number
+  max_token_for_text_unit?: number
+  max_token_for_global_context?: number
+  max_token_for_local_context?: number
+  hl_keywords?: string[]
+  ll_keywords?: string[]
+  stream?: boolean
+  history_turns?: number
+  student_name?: string
+  speaker: 'student' | 'patient'
+  content: string
+}
 
 type Theme = 'dark' | 'light' | 'system'
-type Tab = 'documents' | 'knowledge-graph' | 'retrieval' | 'api'
+type Tab = 'documents' | 'knowledge-graph' | 'retrieval' | 'reply' | 'api'
 
 interface SettingsState {
   // Graph viewer settings
@@ -34,7 +61,17 @@ interface SettingsState {
 
   querySettings: Omit<QueryRequest, 'query'>
   updateQuerySettings: (settings: Partial<QueryRequest>) => void
- 
+
+  // Reply settings
+  replyLabel: string
+  setReplyLabel: (replyLabel: string) => void
+
+  dialogTurns: DialogTurn[]
+  setDialogTurns: (turns: DialogTurn[]) => void
+
+  replySettings: ReplyParams
+  updateReplySettings: (settings: Partial<ReplyParams>) => void
+
   // Auth settings
   apiKey: string | null
   setApiKey: (key: string | null) => void
@@ -70,13 +107,16 @@ const useSettingsStoreBase = create<SettingsState>()(
 
       queryLabel: defaultQueryLabel,
 
+      replyLabel: defaultReplyLabel,
+
       enableHealthCheck: true,
 
       apiKey: null,
 
-      currentTab: 'documents',
+      currentTab: 'reply',
 
       retrievalHistory: [],
+      dialogTurns: [],
 
       querySettings: {
         mode: 'global',
@@ -94,6 +134,28 @@ const useSettingsStoreBase = create<SettingsState>()(
         namespace: undefined
       },
 
+      replySettings: {
+        mode: 'hybrid',
+        only_need_context: false,
+        only_need_prompt: false,
+        topic: '',
+        sub_topic: '',
+        intent: '',
+        sentiment: '',
+        technique: '',
+        level: '',
+        top_k: 10,
+        max_token_for_text_unit: 4000,
+        max_token_for_global_context: 4000,
+        max_token_for_local_context: 4000,
+        hl_keywords: [],
+        stream: false,
+        history_turns: 3,
+        student_name: '',
+        speaker: 'student',
+        content: '',
+      },
+
       setTheme: (theme: Theme) => set({ theme }),
 
       setEnableHealthCheck: (enable: boolean) => set({ enableHealthCheck: enable }),
@@ -108,6 +170,11 @@ const useSettingsStoreBase = create<SettingsState>()(
           queryLabel
         }),
 
+      setReplyLabel: (replyLabel: string) =>
+        set({
+          replyLabel
+        }),
+
       setGraphQueryMaxDepth: (depth: number) => set({ graphQueryMaxDepth: depth }),
 
       setApiKey: (apiKey: string | null) => set({ apiKey }),
@@ -116,9 +183,16 @@ const useSettingsStoreBase = create<SettingsState>()(
 
       setRetrievalHistory: (history: Message[]) => set({ retrievalHistory: history }),
 
+      setDialogTurns: (turns: DialogTurn[]) => set({ dialogTurns: turns }),
+
       updateQuerySettings: (settings: Partial<QueryRequest>) =>
         set((state) => ({
           querySettings: { ...state.querySettings, ...settings }
+        })),
+
+      updateReplySettings: (settings: Partial<ReplyParams>) =>
+        set((state) => ({
+          replySettings: { ...state.replySettings, ...settings }
         }))
     }),
     {
@@ -140,7 +214,7 @@ const useSettingsStoreBase = create<SettingsState>()(
           state.apiKey = null
         }
         if (version < 5) {
-          state.currentTab = 'documents'
+          state.currentTab = 'reply'
         }
         if (version < 6) {
           state.querySettings = {
@@ -158,6 +232,8 @@ const useSettingsStoreBase = create<SettingsState>()(
             ll_keywords: []
           }
           state.retrievalHistory = []
+          state.dialogTurns = []
+          state.replyLabel = defaultReplyLabel
         }
         if (version < 7) {
           state.graphQueryMaxDepth = 3
