@@ -1407,8 +1407,8 @@ class LightRAG:
             str | AsyncIterator[str]: The AI-generated response.
         """
         # Reply Roles
-        role_user = os.getenv("REPLY_ROLE_USER")
-        role_assistant = os.getenv("REPLY_ROLE_ASSISTANT")
+        role_user = os.getenv("REPLY_ROLE_USER", "student")
+        role_assistant = os.getenv("REPLY_ROLE_ASSISTANT", "school_counselor")
        
         # Extract the last user message
         # If this the first message, then look up the kg to derive an opener
