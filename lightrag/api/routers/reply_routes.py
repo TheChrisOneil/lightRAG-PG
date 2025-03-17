@@ -33,7 +33,7 @@ class AISuggestion(BaseModel):
     intent: Optional[str] = None
     sentiment: Optional[str] = None
     topic: Optional[str] = None
-    subTopic: Optional[str] = None
+    sub_topic: Optional[str] = None
     technique: Optional[str] = None
     level: Optional[str] = None
     confidence: Optional[float] = None
@@ -45,7 +45,7 @@ class UserMessage(BaseModel):
     intent: Optional[str] = None
     sentiment: Optional[str] = None
     topic: Optional[str] = None
-    subTopic: Optional[str] = None
+    sub_topic: Optional[str] = None
     technique: Optional[str] = None
     level: Optional[str] = None
 
@@ -173,7 +173,7 @@ class ReplyRequest(BaseModel):
                 intent="Support",
                 sentiment="Concerned",
                 topic="Academics",
-                subTopic="Math",
+                sub_topic="Math",
                 technique="OpenEnded",
                 level="Trust"
             ),
@@ -189,7 +189,7 @@ class ReplyRequest(BaseModel):
                         intent="Encouragement",
                         sentiment="Supportive",
                         topic="Motivation",
-                        subTopic="Self-Esteem",
+                        sub_topic="Self-Esteem",
                         technique="Empathy",
                         level="Trust",
                         confidence=0.95
@@ -199,7 +199,7 @@ class ReplyRequest(BaseModel):
                         intent="Empathy",
                         sentiment="Compassionate",
                         topic="Emotional Support",
-                        subTopic="Stress",
+                        sub_topic="Stress",
                         technique="Validation",
                         level="Support",
                         confidence=0.91
@@ -226,7 +226,7 @@ class ReplyRequest(BaseModel):
         return [keyword.strip() for keyword in ll_keywords]
 
     def to_reply_params(self, is_stream: bool) -> "ReplyParam":
-        request_data = self.model_dump(exclude_none=True, exclude={"student_name","speaker","content","timestamp","conversation_history"})
+        request_data = self.model_dump(exclude_none=True, exclude={"topic", "sub-topic","intent", "sentiment", "technique", "level", "student_name","speaker","content","timestamp","conversation_history"})
         param = ReplyParam(**request_data)
         param.stream = is_stream
         return param

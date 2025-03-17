@@ -122,7 +122,7 @@ type AISuggestion = {
   intent?: string
   sentiment?: string
   topic?: string
-  subTopic?: string
+  sub_topic?: string
   technique?: string
   level?: string
   confidence?: number
@@ -171,7 +171,7 @@ export type UserMessage = {
   intent?: string
   sentiment?: string
   topic?: string
-  subTopic?: string
+  sub_topic?: string
   technique?: string
   level?: string
   timestamp: string

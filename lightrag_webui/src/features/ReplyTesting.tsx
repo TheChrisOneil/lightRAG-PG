@@ -169,7 +169,7 @@ export default function ReplyTesting() {
       intent: state.replySettings.intent,
       sentiment: state.replySettings.sentiment,
       topic: state.replySettings.topic,
-      subTopic: state.replySettings.sub_topic,
+      sub_topic: state.replySettings.sub_topic,
       technique: state.replySettings.technique,
       level: state.replySettings.level,
     }

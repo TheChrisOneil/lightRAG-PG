@@ -15,7 +15,7 @@ def format_conversation_history(conversation_history: List[Dict[str, Any]]) -> s
                 f"  - Intent: {user.get('intent', '')}\n"
                 f"  - Sentiment: {user.get('sentiment', '')}\n"
                 f"  - Topic: {user.get('topic', '')}\n"
-                f"  - SubTopic: {user.get('subTopic', '')}\n"
+                f"  - Sub_topic: {user.get('sub_topic', '')}\n"
                 f"  - Technique: {user.get('technique', '')}\n"
                 f"  - Level: {user.get('level', '')}"
             )
@@ -31,7 +31,7 @@ def format_conversation_history(conversation_history: List[Dict[str, Any]]) -> s
                     ai_strs.append(
                         f"    Suggestion {idx}: {ai.get('text', '')} "
                         f"(Intent: {ai.get('intent', '')}, Sentiment: {ai.get('sentiment', '')}, "
-                        f"Topic: {ai.get('topic', '')}, SubTopic: {ai.get('subTopic', '')}, "
+                        f"Topic: {ai.get('topic', '')}, SubTopic: {ai.get('sub_topic', '')}, "
                         f"Technique: {ai.get('technique', '')}, Level: {ai.get('level', '')})"
                     )
                 coach_str += "\n  - AI Suggestions:\n" + "\n".join(ai_strs)
@@ -49,9 +49,9 @@ def format_conversation_history(conversation_history: List[Dict[str, Any]]) -> s
 def find_missing_keys_in_history(conversation_history: List[Dict[str, Any]]) -> List[str]:
     missing_keys_report = []
 
-    required_user_keys = {"timestamp", "content", "intent", "sentiment", "topic", "subTopic", "technique", "level"}
+    required_user_keys = {"timestamp", "content", "intent", "sentiment", "topic", "sub_topic", "technique", "level"}
     required_coach_keys = {"timestamp", "content", "aiSuggestions", "isFinalized", "selectedSuggestionIndex"}
-    required_ai_keys = {"text", "intent", "sentiment", "topic", "subTopic", "technique", "level", "confidence"}
+    required_ai_keys = {"text", "intent", "sentiment", "topic", "sub_topic", "technique", "level", "confidence"}
 
     for i, turn in enumerate(conversation_history, start=1):
         user = turn.get("userMessage")

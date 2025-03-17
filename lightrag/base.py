@@ -94,7 +94,7 @@ class ReplyParam:
     """The sentiment of the message."""
     topic: Optional[str] = None
     """The topic of the message."""
-    subTopic: Optional[str] = None
+    sub_topic: Optional[str] = None
     """The subtopic of the message."""
     technique: Optional[str] = None
     """The technique of the message."""
@@ -152,7 +152,7 @@ class AISuggestion:
     intent: Optional[str] = None
     sentiment: Optional[str] = None
     topic: Optional[str] = None
-    subTopic: Optional[str] = None
+    sub_topic: Optional[str] = None
     technique: Optional[str] = None
     level: Optional[str] = None
     confidence: Optional[float] = None
@@ -165,7 +165,7 @@ class UserMessage:
     intent: Optional[str] = None
     sentiment: Optional[str] = None
     topic: Optional[str] = None
-    subTopic: Optional[str] = None
+    sub_topic: Optional[str] = None
     technique: Optional[str] = None
     level: Optional[str] = None
 
