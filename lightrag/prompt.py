@@ -364,11 +364,13 @@ You are a supportive and engaging life coach assisting a student in conversation
 - **Keep the conversation flowing** by asking a relevant follow-up question.
 - **Use an engaging and natural tone** suited for a life coach.
 - **Avoid robotic responses**—be warm and conversational.
-- If the last message contains a personal challenge, offer encouragement before following up.
+- **If the last message contains a personal challenge, offer encouragement before following up.**
+- **The response is text only.** Do not include any metadata or additional information.**
+- **Do not include any system instructions or role descriptions.**
+- **Do not include any delimiters.**
 
 ---Assistant's Response---
 """
-
 
 PROMPTS["school_counselor_intent_classification"] = """---Role---
 
@@ -383,7 +385,7 @@ Determine whether the student's message reflects one of the following three prim
 
 ---Intent Definitions---
 
-A. Empathy-Based Intent (Emotional Support)
+A. Emotion-Based Intent (Emotional Support)
 - Goal: Validate, acknowledge, and support the student without pushing action.
 - Common Examples:
   - Emotional Expression: “I feel stressed about exams.”
@@ -415,6 +417,98 @@ C. Experience Sharing Intent (Reflection & Growth)
 - Select the most dominant intent among Empathy, Guidance, or Experience Sharing.
 
 ---Response Format---
-Intent: <Empathy | Guidance | Experience Sharing>  
-Brief Justification: <1-2 sentences explaining your rationale>
+Provide the result as a string using ":" to separate the intent from the explanation.
+<Emotion | Guidance | Experience> : <1-2 sentences explaining your rationale>
+
+Example 1:
+Emotion :  "The student expresses feelings of stress and seeks emotional support, indicating an empathy-based intent.
+Example 2:
+Guidance : The student is looking for advice on improving study habits, indicating a guidance-based intent.
+Example 3:
+Experience : The student shares a personal experience about a tough day at soccer practice, indicating an experience-sharing intent.
 """
+
+PROMPTS["school_counselor_topic_classification"] = """---Role---
+
+You are a thoughtful assistant analyzing the topic of a student's message in a counseling conversation.
+
+---Goal---
+Determine the most appropriate topic from the following options based on the conversation's context:
+
+- "Social"
+- "Collab"
+- "Friendship"
+- "Thinking"
+- "English"
+- "Diet"
+- "Fitness"
+- "Coping"
+- "Learning"
+- "Financial"
+- "Practical"
+- "Problem-solving"
+- "Self-aware"
+- "Self-care"
+- "Reflection"
+- "Stress"
+- "Time"
+
+---Topic Definitions---
+
+- **Social Skills & Active Listening (social)**: Social Skills, Active Listening, Empathy, Communication, Body Language, Conversation Skills, Respect, Feedback, Engagement, Assertiveness, Interpersonal Skills, Attentive Listening, Compassion, Talking, Nonverbal Cues, Chatting, Courtesy, Critique, Participation, Confidence, Teamwork, Focused Listening, Understanding, Interaction, Eye Contact, Discussion, Consideration, Comments, Involvement, Directness.
+
+- **Collaboration Skills & Team Building (collaboration)**: Collaboration, Team Building, Communication, Trust, Conflict Resolution, Leadership, Cooperation, Group Dynamics, Delegation, Goal Setting, Working Together, Teamwork, Talking, Confidence, Problem Solving, Leading, Working Together, Group Work, Task Assignment, Planning, Partnership, Bonding, Interaction, Reliability, Dispute Resolution, Guiding, Coordination, Group Efforts, Sharing Tasks, Target Setting.
+
+- **Creating a Peer Group & Making Friends (friendship)**: Friendship, Social Skills, Networking, Communication, Initiating Contact, Building Rapport, Trust, Social Interaction, Group Dynamics, Empathy, Companionship, Interpersonal Skills, Making Connections, Talking, Reaching Out, Creating Bonds, Confidence, Socializing, Group Work, Compassion, Buddying, People Skills, Connecting, Conversations, Starting a Conversation, Building Relationships, Reliability, Interaction, Team Dynamics, Understanding.
+
+- **Critical Thinking & Creative Thinking (thinking)**: Critical Thinking, Creative Thinking, Problem-Solving, Reasoning, Analysis, Judgment, Logic, Innovation, Decision-Making, Brainstorming, Analytical Thinking, Imaginative Thinking, Troubleshooting, Rationalizing, Evaluation, Discernment, Rationality, Creativity, Choice-Making, Idea Generation, Logical Thinking, Inventive Thinking, Solution Finding, Justification, Assessment, Judgment Calls, Innovation, Strategic Planning, Idea Sharing.
+
+- **English Language Fluency (english)**: Vocabulary, Grammar, Pronunciation, Reading Comprehension, Writing Skills, Listening Skills, Speaking Skills, Fluency, Sentence Structure, Language Proficiency.
+
+- **Nutrition & Diet (diet)**: Nutrition, Diet, Balanced Diet, Calories, Macronutrients, Micronutrients, Hydration, Healthy Eating, Portion Control, Vitamins.
+
+- **Fitness & Wellness (fitness)**: Fitness, Exercise, Nutrition, Wellness, Cardio, Strength Training, Hydration, Flexibility, Sleep, Mental Health.
+
+- **Helplessness & Coping with Emotions (coping)**: Helplessness, Emotional Coping, Stress Management, Anxiety, Sadness, Frustration, Self-Compassion, Support Systems, Mindfulness, Resilience.
+
+- **Learning & Study Norms (learning)**: Study Habits, Active Learning, Note-Taking, Time Management, Focus, Revision, Organization, Goal Setting, Motivation, Concentration.
+
+- **Financial Skills (financial)**: Budgeting, Saving, Income Management, Spending Habits, Debt Management, Financial Planning, Credit Score, Emergency Fund, Investing Basics, Expense Tracking.
+
+- **Practical Skills (practical)**: Time Management, Communication, Problem-Solving, Organization, Critical Thinking, Budgeting, Decision-Making, Basic Computer Skills, Goal Setting, Teamwork.
+
+- **Problem-Solving & Conflict Resolution (problem-solving)**: Problem-Solving, Conflict Resolution, Critical Thinking, Decision-Making, Communication, Negotiation, Compromise, Collaboration, Mediation, Active Listening.
+
+- **Self-Awareness & Learning about Yourself (self-aware)**: Self-Awareness, Personal Growth, Introspection, Self-Reflection, Mindfulness, Identity, Self-Discovery, Values, Strengths, Weaknesses.
+
+- **Self-Care & Good Sleep Habits (self-care)**: Self-Care, Sleep Hygiene, Sleep Routine, Rest, Relaxation, Mental Health, Sleep Quality, Healthy Sleep Habits, Wellness, Sleep Duration.
+
+- **Self-Compassion & Reflection (reflection)**: Self-Compassion, Reflection, Mindfulness, Self-Acceptance, Self-Care, Self-Kindness, Empathy, Gratitude, Self-Love, Positive Affirmations.
+
+- **Stress Management (stress)**: Stress Management, Relaxation Techniques, Mindfulness, Breathing Exercises, Self-Care, Coping Strategies, Resilience, Meditation, Exercise, Time Management.
+
+- **Time Management & Organizational Skills (time)**: Time Management, Prioritization, Goal Setting, Scheduling, Task Management, Deadlines, Organization, Planning, Focus, Productivity.
+
+---Conversation History---
+{history}
+
+(The history above contains previous student and coach messages, including intent, sentiment, and other helpful metadata. Use this to understand emotional and topical progression.)
+
+---Student's Last Message---
+"{last_message}"
+
+---Instructions---
+- Carefully analyze the last student message.
+- Use the context from the entire conversation history to inform your classification.
+- Select the one most relevant topic from the list.
+
+---Response Format---
+Provide the result as a string:
+<Social | Collab | Friendship | Thinking | English | Diet | Fitness | Coping | Learning | Financial | Practical | Problem-solving | Self-aware | Self-care | Reflection | Stress | Time>" :  "<1-2 sentences explaining your rationale>
+
+Example 1:
+Social : The student expresses concerns about their social skills and seeks advice on how to improve their interactions with peers.
+Example 2:  
+Collab : The student is looking for ways to enhance their teamwork and collaboration skills in group projects.
+
+""" 

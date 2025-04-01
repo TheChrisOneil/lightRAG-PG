@@ -5,16 +5,13 @@ import { createSelectors } from '@/lib/utils'
 import { Message, QueryRequest } from '@/api/lightrag'
 import type { DialogTurn} from '@/api/lightrag'
 
-
-
-
 export interface ReplyParams {
-  topic?: string
-  sub_topic?: string
-  intent?: string
-  sentiment?: string
-  technique?: string
-  level?: string
+  topic: string
+  sub_topic: string
+  intent: string
+  sentiment: string
+  technique: string
+  level: string
   mode: 'local' | 'global' | 'hybrid' | 'naive' | 'mix'
   only_need_context?: boolean
   only_need_prompt?: boolean
@@ -29,6 +26,14 @@ export interface ReplyParams {
   student_name?: string
   speaker: 'student' | 'patient'
   content: string
+  tooltips?: {
+    topic?: string
+    sub_topic?: string
+    intent?: string
+    sentiment?: string
+    technique?: string
+    level?: string
+  }
 }
 
 type Theme = 'dark' | 'light' | 'system'
@@ -138,12 +143,12 @@ const useSettingsStoreBase = create<SettingsState>()(
         mode: 'hybrid',
         only_need_context: false,
         only_need_prompt: false,
-        topic: '',
-        sub_topic: '',
-        intent: '',
-        sentiment: '',
-        technique: '',
-        level: '',
+        topic: 'Unknown',
+        sub_topic: 'Unknown',
+        intent: 'Unknown',
+        sentiment: 'Unknown',
+        technique: 'Unknown',
+        level: 'Unknown',
         top_k: 10,
         max_token_for_text_unit: 4000,
         max_token_for_global_context: 4000,
@@ -154,6 +159,7 @@ const useSettingsStoreBase = create<SettingsState>()(
         student_name: '',
         speaker: 'student',
         content: '',
+        tooltips: {}
       },
 
       setTheme: (theme: Theme) => set({ theme }),

@@ -3,6 +3,7 @@ from __future__ import annotations
 import asyncio
 import configparser
 import os
+import re
 import warnings
 import json
 from dataclasses import asdict, dataclass, field
@@ -15,6 +16,7 @@ from lightrag.kg import (
     verify_storage_implementation,
 )
 
+
 from .base import (
     BaseGraphStorage,
     BaseKVStorage,
@@ -26,7 +28,11 @@ from .base import (
     StorageNameSpace,
     StoragesStatus,
     ReplyParam,
+    UserMessage,
+    CoachMessage,
     DialogTurn,
+    ConversationHistory,
+    AISuggestion
 )
 from .namespace import NameSpace, make_namespace
 from .operate import (
@@ -1395,7 +1401,7 @@ class LightRAG:
          timestamp: str,
          conversation_history: list[DialogTurn],
          param: ReplyParam,
-    ) -> str | AsyncIterator[str]:
+    ) -> CoachMessage:
         """
         Generate a reply as a supportive life coach, digital twin based on the last user's message.
 
@@ -1406,46 +1412,102 @@ class LightRAG:
         Returns:
             str | AsyncIterator[str]: The AI-generated response.
         """
-        # Reply Roles
-        role_user = os.getenv("REPLY_ROLE_USER", "student")
-        role_assistant = os.getenv("REPLY_ROLE_ASSISTANT", "school_counselor")
-       
-        # Extract the last user message
-        # If this the first message, then look up the kg to derive an opener
-        if not content:
-            # TODO: Look up the KG to derive an opener
-            return " How has your day been?"
+        try:
+            # Reply Roles
+            role_user = os.getenv("REPLY_ROLE_USER", "student")
+            role_assistant = os.getenv("REPLY_ROLE_ASSISTANT", "school_counselor")
+        
+            # Extract the last user message
+            # If this the first message, then look up the kg to derive an opener
+            if not content:
+                sample_opener = "How has your day been?"
+                ai_suggestions = [AISuggestion(text=sample_opener, intent="N/A", topic="N/A", 
+                                        sentiment="N/A", level="N/A")]
+                # TODO: Look up the KG to derive an opener
+                return CoachMessage(
+                    speaker="coach",
+                    content=sample_opener,
+                    aiSuggestions=ai_suggestions,
+                    selectedSuggestionIndex=0,
+                    isFinalized=True,
+                    timestamp=timestamp
+                )
 
-        # Format conversation history to string
-        formatted_history = format_conversation_history(conversation_history)
-        logger.debug(f"Formatted conversation history:\n{formatted_history}")
-        # Detect missing keys (optional debug log)
-        missing_keys_report = find_missing_keys_in_history(conversation_history)
-        if missing_keys_report:
-            logger.warning(f"Missing keys detected in conversation history:\n" + "\n".join(missing_keys_report))
+            # Format conversation history to string for LLM
+            # This is a custom function to format the conversation history
+            # into a string representation suitable for the LLM prompt
+            formatted_history = format_conversation_history(conversation_history)
+            logger.debug(f"Formatted conversation history:\n{formatted_history}")
+            
+            # Detect missing keys (optional debug log)
+            # missing_keys_report = find_missing_keys_in_history(conversation_history)
+            # if missing_keys_report:
+            #    logger.warning(f"Missing keys detected in conversation history:\n" + "\n".join(missing_keys_report))
 
+            logger.debug(f"Creating intent LLM:\n{content} \n{role_assistant}")   
+            # Construct the INTENT  prompt to capture the intent using formatted history
+            try:
+                reply_prompt = PROMPTS[f"school_counselor_intent_classification"].format(
+                    history=formatted_history,
+                    last_message=content,
+                )
+            except KeyError as e:
+                logger.error(f"KeyError accessing prompt with key {role_assistant}_intent_classification: {e}")
+                raise
+            except Exception as e:
+                logger.error(f"Unexpected error while formatting the prompt: {e}")
+                raise
+            logger.debug(f"Done intent and topic classification prompt for LLM\n{reply_prompt}")               
+        
+            # # Call LLM to generate INTENT response 
+            intent = await self.llm_model_func(reply_prompt)
 
-        # Construct the prompt to capture the intent using formatted history
-        reply_prompt = PROMPTS[f"{role_assistant}_intent_classification"].format(
-            history=formatted_history,
-            last_message=content,
-        )
-        # Call LLM to generate response (assuming `llm_model_func` is available)
-        intent = await self.llm_model_func(reply_prompt)
-        logger.debug(f"Detected intent: {intent}")
-        # Call LLM to generate response (assuming `llm_model_func` is available)
-        response = await self.llm_model_func(reply_prompt)
-        # Construct the prompt for LLM using formatted history
-        reply_prompt = PROMPTS[f"{role_assistant}_reply"].format(
-            history=formatted_history,
-            last_message=content,
-            intent=intent,
-        )
+            # Construct the TOPIC  prompt to capture the sentiment using formatted history
+            reply_prompt = PROMPTS[f"school_counselor_topic_classification"].format(
+                history=formatted_history,
+                last_message=content,
+            )
 
-        # Call LLM to generate response (assuming `llm_model_func` is available)
-        response = await self.llm_model_func(reply_prompt)
+            # Call LLM to generate response (assuming `llm_model_func` is available)
+            topic = await self.llm_model_func(reply_prompt)
+            logger.debug(f"Detected topic: {topic}")
+            
+            # Construct the prompt for LLM using formatted history
+            reply_prompt = PROMPTS[f"{role_assistant}_reply"].format(
+                history=formatted_history,
+                last_message=content,
+                intent=intent,
+            )
 
-        return response
+            # Call LLM to generate response (assuming `llm_model_func` is available)
+            response = await self.llm_model_func(reply_prompt)
+
+            ai_suggestions = [AISuggestion(text=response, intent=intent, topic=topic, 
+                                        sentiment="N/A", level="N/A")]
+            new_reply =  CoachMessage(
+                speaker="coach",
+                content=response,
+                aiSuggestions=ai_suggestions,
+                selectedSuggestionIndex=0,
+                isFinalized=False,
+                timestamp=timestamp
+            )
+            
+            # logger.debug(f"Reply type: {type(new_reply)}, Reply: {new_reply}")
+            
+            return new_reply
+        except Exception as e:
+            logger.error(f"Error in acoach_reply: {e}")
+
+            # Return a fallback CoachMessage object
+            return CoachMessage(
+                speaker="coach",
+                content="I'm having trouble generating a response. Can we try again?",
+                isFinalized=True,
+                selectedSuggestionIndex=-1,
+                timestamp=timestamp,
+                aiSuggestions=[]
+            )
 
 
     def coach_reply(

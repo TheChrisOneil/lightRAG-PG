@@ -6,19 +6,32 @@ import Checkbox from '@/components/ui/Checkbox'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card'
 import { useSettingsStore } from '@/stores/settings'
 
+// Define a type that includes only the keys that support tooltips
+type TooltipKeys = 'topic' | 'sub_topic' | 'intent' | 'sentiment' | 'technique' | 'level';
+
 export default function ReplySettings() {
   // Update namespace in query settings
   const querySettings = useSettingsStore((state) => state.querySettings)
+
   const handleQueryChange = useCallback((key: keyof QueryRequest, value: any) => {
     useSettingsStore.getState().updateQuerySettings({ [key]: value })
   }, [])  
 
   // Update reply settings
   const replySettings = useSettingsStore((state) => state.replySettings)
+  console.log('replySettings', replySettings)
 
   const handleChange = useCallback((key: keyof ReplyRequest, value: any) => {
     useSettingsStore.getState().updateReplySettings({ [key]: value })
   }, [])
+  // Update getTooltip to only return tooltips for the specified keys
+  const getTooltip = (key: TooltipKeys) => {
+    return replySettings?.tooltips?.[key] || '';
+  };
+
+  const enforceValue = (value: string | undefined | null) => {
+    return value && value.trim() !== '' ? value : 'Unknown';
+  };
 
   return (
     <Card className="flex shrink-0 flex-col">
@@ -105,56 +118,86 @@ export default function ReplySettings() {
               onCheckedChange={(checked) => handleChange('only_need_prompt', checked)}
             />
 
-            <Text className="ml-1" text="Topic" side="left" />
+            <Text
+              className="ml-1"
+              text="Topic"
+              tooltip={getTooltip('topic')}
+              side="left"
+            />
             <Input
               id="topic"
               type="text"
-              value={replySettings.topic ?? ''}
+              value={enforceValue(replySettings.topic)}
               onChange={(e) => handleChange('topic', e.target.value)}
               placeholder="Enter topic"
             />
 
-            <Text className="ml-1" text="Sub Topic" side="left" />
+            <Text
+              className="ml-1"
+              text="Sub Topic"
+              tooltip={getTooltip('sub_topic')}
+              side="left"
+            />
             <Input
               id="sub_topic"
               type="text"
-              value={replySettings.sub_topic ?? ''}
+              value={enforceValue(replySettings.sub_topic)}
               onChange={(e) => handleChange('sub_topic', e.target.value)}
               placeholder="Enter sub topic"
             />
 
-            <Text className="ml-1" text="Intent" side="left" />
+            <Text
+              className="ml-1"
+              text="Intent"
+              tooltip={getTooltip('intent')}
+              side="left"
+            />
             <Input
               id="intent"
               type="text"
-              value={replySettings.intent ?? ''}
+              value={enforceValue(replySettings.intent)}
               onChange={(e) => handleChange('intent', e.target.value)}
               placeholder="Enter intent"
             />
 
-            <Text className="ml-1" text="Sentiment" side="left" />
+            <Text
+              className="ml-1"
+              text="Sentiment"
+              tooltip={getTooltip('sentiment')}
+              side="left"
+            />
             <Input
               id="sentiment"
               type="text"
-              value={replySettings.sentiment ?? ''}
+              value={enforceValue(replySettings.sentiment)}
               onChange={(e) => handleChange('sentiment', e.target.value)}
               placeholder="Enter sentiment"
             />
 
-            <Text className="ml-1" text="Technique" side="left" />
+            <Text
+              className="ml-1"
+              text="Technique"
+              tooltip={getTooltip('technique')}
+              side="left"
+            />
             <Input
               id="technique"
               type="text"
-              value={replySettings.technique ?? ''}
+              value={enforceValue(replySettings.technique)}
               onChange={(e) => handleChange('technique', e.target.value)}
               placeholder="Enter technique"
             />
 
-            <Text className="ml-1" text="Level" side="left" />
+            <Text
+              className="ml-1"
+              text="Level"
+              tooltip={getTooltip('level')}
+              side="left"
+            />
             <Input
               id="level"
               type="text"
-              value={replySettings.level ?? ''}
+              value={enforceValue(replySettings.level)}
               onChange={(e) => handleChange('level', e.target.value)}
               placeholder="Enter level"
             />

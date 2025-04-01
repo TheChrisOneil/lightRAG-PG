@@ -1,6 +1,21 @@
 from typing import List, Dict, Any
 
 def format_conversation_history(conversation_history: List[Dict[str, Any]]) -> str:
+    """_summary_
+    This function formats the conversation history for better readability.
+    It takes a list of conversation turns, each containing user and coach messages,
+    and formats them into a structured string representation.
+    Each turn is numbered, and the user and coach messages are displayed with their respective details.
+    The function also includes additional information such as intent, sentiment, topic, sub-topic,
+    technique, and level for the user message, and AI suggestions for the coach message.
+    The output string is required to insert into a prompt for use by the LLM.
+
+    Args:
+        conversation_history (List[Dict[str, Any]]): _description_
+
+    Returns:
+        str: _description_
+    """
     formatted_turns = []
 
     for i, turn in enumerate(conversation_history, start=1):

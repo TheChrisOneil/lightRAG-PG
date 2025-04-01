@@ -1,7 +1,7 @@
 import Input from '@/components/ui/Input'
 import Button from '@/components/ui/Button'
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { coachReplyText, coachReplyTextStream, ReplyRequest, DialogTurn, CoachMessage, UserMessage } from '@/api/lightrag'
+import { coachReplyText, coachReplyTextStream, ReplyRequest, CoachMessage, UserMessage } from '@/api/lightrag'
 import { errorMessage } from '@/lib/utils'
 import { useSettingsStore } from '@/stores/settings'
 import { useDebounce } from '@/hooks/useDebounce'
@@ -13,6 +13,7 @@ import { ConversationStartInstructions, ConversationContinueInstructions } from 
 export default function ReplyTesting() {
   const messages = useSettingsStore((state) => state.dialogTurns)
   const setMessages = useSettingsStore((state) => state.setDialogTurns)
+  const setReplySettings = useSettingsStore((state) => state.updateReplySettings);
 
   const [isLoading, setIsLoading] = useState(false)
   const [editingIndex, setEditingIndex] = useState<number | null>(null)
@@ -24,116 +25,6 @@ export default function ReplyTesting() {
   const scrollToBottom = useCallback(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [])
-
-  // const handleConversation = async (selectedSpeaker: 'student' | 'coach', initialContent: string) => {
-  //   const state = useSettingsStore.getState()
-  //   const timestamp = new Date().toISOString()
-  //   console.log('Starting conversation as:', selectedSpeaker)
-  //   if (selectedSpeaker === 'coach') {
-  //     // If coach initiates a conversation the dialog turn is complete
-  //     // The dialog turn is created with only the coach message
-  //     // and no user message and now send to the API for a student response.
-  //     const coachMsg: CoachMessage = {
-  //       speaker: selectedSpeaker,
-  //       content: initialContent,
-  //       isFinalized: true,
-  //       aiSuggestions: [],
-  //       selectedSuggestionIndex: -1,
-  //       timestamp,
-  //     }
-
-  //     const dialogTurn: DialogTurn = {
-  //       coachMessage: coachMsg,
-  //     }
-
-  //     setMessages([...messages, dialogTurn])
-  //     return
-  //   }
-
-  //   // If student initiates or continues a conversation
-  //   // Create a new dialog turn with the student message
-  //   // and sent to the API for a coaches response
-  //   const userMsg: UserMessage = {
-  //     speaker: selectedSpeaker,
-  //     content: initialContent,
-  //     timestamp,
-  //     intent: state.replySettings.intent,
-  //     sentiment: state.replySettings.sentiment,
-  //     topic: state.replySettings.topic,
-  //     subTopic: state.replySettings.sub_topic,
-  //     technique: state.replySettings.technique,
-  //     level: state.replySettings.level,
-  //   }
-
-  //   const updatedMessages = [...messages]
-  //   const dialogTurn: DialogTurn = {
-  //     userMessage: userMsg
-  //   }
-  //   updatedMessages.push(dialogTurn)
-    
-  //   const replyRequest: ReplyRequest = {
-  //     ...state.replySettings,
-  //     speaker: selectedSpeaker,  // student
-  //     content: initialContent, // it can be initial message or follow-up message
-  //     timestamp,
-  //     conversation_history: updatedMessages,
-  //   }
-
-  //   try {
-  //     if (state.replySettings.stream) {
-  //       await coachReplyTextStream(
-  //         replyRequest,
-  //         (chunk: string) => {
-  //           const response = JSON.parse(chunk) as { coachMessage: CoachMessage }
-  //           const currentMessages = useSettingsStore.getState().dialogTurns
-  //           const updated = [...currentMessages]
-  //           const lastTurn = updated[updated.length - 1]
-  //           console.log('Stream response:', response)
-  //           if (!lastTurn) return
-  //           const updatedTurn: DialogTurn = {
-  //             ...lastTurn,
-  //             coachMessage: {
-  //               ...response.coachMessage,
-  //               speaker: response.coachMessage.speaker || 'coach',
-  //             }
-  //           }
-  //           updated[updated.length - 1] = updatedTurn
-  //           setMessages(updated)
-  //         },
-  //       )
-  //     } else {
-  //       const response = await coachReplyText(replyRequest)
-  //       console.log('Response:', response)
-  //       const currentMessages = useSettingsStore.getState().dialogTurns
-  //       const updated = [...currentMessages]
-  //       const last = updated[updated.length - 1]
-  //       if (last) {
-  //         const updatedTurn: DialogTurn = {
-  //           ...last,
-  //           coachMessage: {
-  //             speaker: response.coachMessage?.speaker || 'coach',
-  //             content: response.coachMessage?.content || '',
-  //             aiSuggestions: response.coachMessage?.aiSuggestions || [],
-  //             selectedSuggestionIndex: response.coachMessage?.selectedSuggestionIndex || -1,
-  //             isFinalized: response.coachMessage?.isFinalized || false,
-  //             timestamp: response.coachMessage?.timestamp || new Date().toISOString(),
-  //           }
-  //         }
-  //         updated[updated.length - 1] = updatedTurn
-  //       }
-  //       setMessages(updated)
-  //     }
-  //   } catch (err) {
-  //     const updated = [...messages]
-  //     const last = updated[updated.length - 1]
-  //     if (last.coachMessage) {
-  //       last.coachMessage.content = `\nError: Failed to get response\n${errorMessage(err)}`
-  //     }
-  //     setMessages(updated)
-  //   } finally {
-  //     setIsLoading(false)
-  //   }
-  // }
 
   const handleConversation = async (selectedSpeaker: 'student' | 'coach', initialContent: string) => {
     const state = useSettingsStore.getState()
@@ -185,7 +76,7 @@ export default function ReplyTesting() {
       timestamp,
       conversation_history: updatedMessages,
     }
-  
+    console.log('Reply Request:', replyRequest)
     try {
       if (state.replySettings.stream) {
         // Streaming scenario
@@ -218,6 +109,26 @@ export default function ReplyTesting() {
             selectedSuggestionIndex: response.coachMessage?.selectedSuggestionIndex ?? -1,
             isFinalized: response.coachMessage?.isFinalized ?? false,
             timestamp: response.coachMessage?.timestamp || new Date().toISOString(),
+          }
+          // Update the reply settings state variables with tooltips
+          const bestSuggestion = response.coachMessage?.aiSuggestions?.[0];
+          if (bestSuggestion) {
+            setReplySettings({
+              intent: bestSuggestion.intent?.split(':')[0] || 'Unknown',
+              sentiment: bestSuggestion.sentiment?.split(':')[0] || 'Unknown',
+              topic: bestSuggestion.topic?.split(':')[0] || 'Unknown',
+              sub_topic: bestSuggestion.sub_topic?.split(':')[0] || 'Unknown',
+              technique: bestSuggestion.technique?.split(':')[0] || 'Unknown',
+              level: bestSuggestion.level?.split(':')[0] || 'Unknown',
+              tooltips: {
+                intent: bestSuggestion.intent?.split(':')[1]?.trim() || '',
+                sentiment: bestSuggestion.sentiment?.split(':')[1]?.trim() || '',
+                topic: bestSuggestion.topic?.split(':')[1]?.trim() || '',
+                sub_topic: bestSuggestion.sub_topic?.split(':')[1]?.trim() || '',
+                technique: bestSuggestion.technique?.split(':')[1]?.trim() || '',
+                level: bestSuggestion.level?.split(':')[1]?.trim() || '',
+              }
+            });
           }
           setMessages(currentMessages)
         }

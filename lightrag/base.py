@@ -14,7 +14,6 @@ from typing import (
     Optional,
 )
 import numpy as np
-from pydantic import BaseModel
 from .utils import EmbeddingFunc
 from .types import KnowledgeGraph
 
@@ -145,7 +144,7 @@ class ReplyParam:
    
 
 
-
+## __Hack__ to avoid circular import
 @dataclass
 class AISuggestion:
     text: str
@@ -171,18 +170,23 @@ class UserMessage:
 
 @dataclass
 class CoachMessage:
+    isFinalized: bool
+    timestamp: str
     speaker: Literal['coach', 'doctor']
     content: Optional[str] = None
     aiSuggestions: Optional[List[AISuggestion]] = None
     selectedSuggestionIndex: Optional[int] = None
-    isFinalized: bool = False
-    timestamp: str = ""
+
 
 @dataclass
 class DialogTurn:
     userMessage: UserMessage
     coachMessage: Optional[CoachMessage] = None
-
+    
+@dataclass
+class ConversationHistory:
+    turns: List[DialogTurn] = field(default_factory=list)
+## __Hack__ to avoid circular import
 
 @dataclass
 class StorageNameSpace(ABC):

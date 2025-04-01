@@ -8,7 +8,7 @@ from typing import Any, Dict, List, Optional, Literal
 from fastapi import APIRouter, Depends, HTTPException, Header, Query, Request
 from ..utils_api import get_api_key_dependency, get_resolved_namespace, get_rag_from_app
 from pydantic import BaseModel, Field, field_validator
-from lightrag.base import ReplyParam
+from lightrag.base import ReplyParam, CoachMessage as BaseCoachMessage, AISuggestion as BaseAISuggestion
 from ascii_colors import trace_exception
 from dotenv import load_dotenv
 import os
@@ -27,7 +27,6 @@ async def get_rag(
 role_user = os.getenv("REPLY_ROLE_USER")
 role_assistant = os.getenv("REPLY_ROLE_ASSISTANT")
 
-
 class AISuggestion(BaseModel):
     text: str
     intent: Optional[str] = None
@@ -37,6 +36,14 @@ class AISuggestion(BaseModel):
     technique: Optional[str] = None
     level: Optional[str] = None
     confidence: Optional[float] = None
+
+    @classmethod
+    def from_base_message(cls, base_ai_suggestion: BaseAISuggestion | dict | None):
+        if isinstance(base_ai_suggestion, (BaseAISuggestion, AISuggestion)):
+            base_ai_suggestion = base_ai_suggestion.__dict__
+        if isinstance(base_ai_suggestion, dict):
+            return cls.model_validate(base_ai_suggestion)
+        raise TypeError("Invalid input type. Expected dict, BaseAISuggestion, or AISuggestion instance.")
 
 class UserMessage(BaseModel):
     speaker: Literal['student', 'patient']
@@ -56,6 +63,14 @@ class CoachMessage(BaseModel):
     selectedSuggestionIndex: Optional[int] = None
     isFinalized: bool
     timestamp: str
+    
+    @classmethod
+    def from_base_message(cls, base_message: BaseCoachMessage):
+        if isinstance(base_message, BaseCoachMessage):
+            base_message = base_message.__dict__
+        if "aiSuggestions" in base_message and base_message["aiSuggestions"]:
+            base_message["aiSuggestions"] = [AISuggestion.from_base_message(s) for s in base_message["aiSuggestions"]]
+        return cls.model_validate(base_message)
 
 class DialogTurn(BaseModel):
     userMessage: Optional[UserMessage] = None
@@ -80,7 +95,11 @@ class ReplyRequest(BaseModel):
         ...,
         description="Timestamp of the current message."
     )
-    topic: Optional[str] = Field(
+    topic: Optional[Literal[
+        "Social", "Collab", "Friendship", "Thinking", "English", "Diet", "Fitness",
+        "Coping", "Learning", "Financial", "Practical", "Problem-solving", 
+        "Self-aware", "Self-care", "Reflection", "Stress", "Time", "Unknown"
+    ]] = Field(
         default=None,
         description="Topic of the desired response.",
     )
@@ -90,22 +109,22 @@ class ReplyRequest(BaseModel):
         description="Sub-topic of the desired response.",
     )
 
-    intent: Optional[str] = Field(
+    intent: Optional[Literal["Experience", "Emotion", "Guidance", "Unknown"]] = Field(
         default=None,
-        description="Intent of the desired response to capture emoution, expereince, guidance.",
+        description="Intent of the desired response to capture Experience, Emotion, or Guidance.",
     )
 
-    sentiment: Optional[str] = Field(
+    sentiment: Optional[Literal["Positive", "Neutral", "Negative", "Unknown"]] = Field(
         default=None,
         description="Sentiment of the desired response.",
     )
 
-    technique: Optional[str] = Field(
+    technique: Optional[Literal["Plow", "Open", "Role", "Stacking", "Callback", "Assign", "Polling", "Pushpull", "Unknown"]] = Field(
         default=None,
         description="Technique of the desired response.",
     )
 
-    level: Optional[str] = Field(
+    level: Optional[Literal["Attraction", "Relate", "Trust", "Unknown"]] = Field(
         default=None,
         description="Level of the desired response.",
     )
@@ -170,7 +189,7 @@ class ReplyRequest(BaseModel):
                 speaker="student",
                 content="I'm falling behind in math and I don't know what to do.",
                 timestamp="2025-03-13T10:00:00Z",
-                intent="Support",
+                intent="Guidance",
                 sentiment="Concerned",
                 topic="Academics",
                 sub_topic="Math",
@@ -186,7 +205,7 @@ class ReplyRequest(BaseModel):
                 aiSuggestions=[
                     AISuggestion(
                         text="You're doing better than you think. Let's work on small wins together.",
-                        intent="Encouragement",
+                        intent="Guidance",
                         sentiment="Supportive",
                         topic="Motivation",
                         sub_topic="Self-Esteem",
@@ -251,7 +270,7 @@ async def reply_text(
     """
     try:
         param = request.to_reply_params(False)
-        coach_msg = await rag.acoach_reply(
+        base_coach_msg = await rag.acoach_reply(
             student_name=request.student_name,
             speaker=request.speaker,
             content=request.content,
@@ -259,16 +278,12 @@ async def reply_text(
         conversation_history=[turn.model_dump() if isinstance(turn, DialogTurn) else turn for turn in request.conversation_history],
             param=param
         )
-        if isinstance(coach_msg, str):
-            logger.debug(f"Coach response: {coach_msg}")
-            coach_msg = CoachMessage(
-                speaker="coach",
-                content=coach_msg,
-                aiSuggestions=[],
-                selectedSuggestionIndex=-1,
-                isFinalized=False,
-                timestamp=request.timestamp
-            )
+        # logger.debug(f"Reply type: {type(coach_msg)}, Reply: {coach_msg}")
+        # Ensure coach_msg is a valid CoachMessage instance
+        coach_msg = CoachMessage.from_base_message(base_coach_msg)
+        if not isinstance(coach_msg, CoachMessage):            
+            logger.error(f"Unexpected response type: {type(coach_msg)}")
+            raise HTTPException(status_code=500, detail="Unexpected response type. Expected CoachMessage.")
 
         return ReplyResponse(
             coachMessage=coach_msg
