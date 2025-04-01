@@ -101,52 +101,16 @@ export default function ReplySettings() {
               placeholder="Enter student name"
             />
 
-            <Text
-              className="ml-1"
-              text="Last Message"
-              tooltip="The last message sent by the user"
-              side="left"
-            />
-
-            <Text
-              className="ml-1"
-              text="Mode"
-              tooltip="Query mode (local, global, hybrid, naive, mix)"
-              side="left"
-            />
+            {/*
+            <Text className="ml-1" text="Sub Topic" tooltip={getTooltip('sub_topic')} side="left" />
             <Input
-              id="mode"
+              id="sub_topic"
               type="text"
-              value={replySettings.mode ?? ''}
-              onChange={(e) => handleChange('mode', e.target.value)}
-              placeholder="Enter mode"
+              value={enforceValue(replySettings.sub_topic)}
+              onChange={(e) => handleChange('sub_topic', e.target.value)}
+              placeholder="Enter sub topic"
             />
-
-            <Text
-              className="ml-1"
-              text="Only Need Context"
-              tooltip="Only return retrieved context"
-              side="left"
-            />
-            <Checkbox
-              className="mr-1 cursor-pointer"
-              id="only_need_context"
-              checked={replySettings.only_need_context}
-              onCheckedChange={(checked) => handleChange('only_need_context', checked)}
-            />
-
-            <Text
-              className="ml-1"
-              text="Only Need Prompt"
-              tooltip="Only return generated prompt"
-              side="left"
-            />
-            <Checkbox
-              className="mr-1 cursor-pointer"
-              id="only_need_prompt"
-              checked={replySettings.only_need_prompt}
-              onCheckedChange={(checked) => handleChange('only_need_prompt', checked)}
-            />
+            */}
 
             <Text className="ml-1" text="Topic" tooltip={getTooltip('topic')} side="left" />
             <Select
@@ -158,15 +122,6 @@ export default function ReplySettings() {
                 }
               }}
               options={formattedTopicOptions}
-            />
-
-            <Text className="ml-1" text="Sub Topic" tooltip={getTooltip('sub_topic')} side="left" />
-            <Input
-              id="sub_topic"
-              type="text"
-              value={enforceValue(replySettings.sub_topic)}
-              onChange={(e) => handleChange('sub_topic', e.target.value)}
-              placeholder="Enter sub topic"
             />
 
             <Text className="ml-1" text="Intent" tooltip={getTooltip('intent')} side="left" />
@@ -192,7 +147,7 @@ export default function ReplySettings() {
               }}
               options={formattedSentimentOptions}
             />
-
+            {/*
             <Text className="ml-1" text="Technique" tooltip={getTooltip('technique')} side="left" />
             <Select
               id="technique-select"
@@ -204,7 +159,7 @@ export default function ReplySettings() {
               }}
               options={formattedTechniqueOptions}
             />
-
+            */}
             <Text className="ml-1" text="Level" tooltip={getTooltip('level')} side="left" />
             <Select
               id="level-select"
@@ -216,7 +171,7 @@ export default function ReplySettings() {
               }}
               options={formattedLevelOptions}
             />
-
+{/*
             <Text className="ml-1" text="Top K" side="left" />
             <Input
               id="top_k"
@@ -270,7 +225,7 @@ export default function ReplySettings() {
               onChange={(e) => handleChange('ll_keywords', e.target.value.split(',').map((k) => k.trim()))}
               placeholder="Comma-separated keywords"
             />
-
+*/}
             <Text className="ml-1" text="History Turns" side="left" />
             <Input
               id="history_turns"

@@ -1462,6 +1462,9 @@ class LightRAG:
         
             # # Call LLM to generate INTENT response 
             intent = await self.llm_model_func(intent_reply_prompt)
+            if not intent or ":" not in intent:
+                logger.warning(f"Invalid intent format: '{intent}'")
+                intent = "Unknown : Unknown"
             logger.debug(f"Detected intent: {intent}")
             
             try:
@@ -1476,25 +1479,62 @@ class LightRAG:
             except Exception as e:
                 logger.error(f"Unexpected error while formatting the topic prompt: {e}")
                 raise
+            
             # Call LLM to generate response (assuming `llm_model_func` is available)
             topic = await self.llm_model_func(topic_reply_prompt)
             logger.debug(f"Detected topic: {topic}")
+            if not topic or ":" not in topic:
+                    logger.warning(f"Invalid topic format: '{topic}'")
+                    topic = "Unknown : Unknown"
+                    topic_only = "unknown"
+            else:
+                    topic_only = topic.split(":")[0].strip().lower()
             
+            # Get sentiment 
             try:
+                prompt = "pre_value_prompt"
+                prompt = f"{role_assistant.lower()}_sentiment_{topic_only}"
                 # Construct the Sentiment  prompt to capture the sentiment using formatted history
-                topic_reply_prompt = PROMPTS[f"{role_assistant}_sentiment_analysis_{topic}"].format(
+                reply_prompt = PROMPTS[prompt].format(
                     history=formatted_history,
                     last_message=content,
                 )
             except KeyError as e:
-                logger.error(f"KeyError accessing prompt with key {role_assistant}_topic_classification: {e}")
+                logger.error(f"KeyError accessing prompt with key {prompt}: {e}")
                 raise
             except Exception as e:
-                logger.error(f"Unexpected error while formatting the topic prompt: {e}")
+                logger.error(f"Unexpected error while formatting sentiment prompt {prompt}: {e}")
                 raise
             # Call LLM to generate response (assuming `llm_model_func` is available)
-            topic = await self.llm_model_func(topic_reply_prompt)
-            logger.debug(f"Detected topic: {topic}")
+            sentiment = await self.llm_model_func(reply_prompt)
+            if not sentiment or ":" not in sentiment:
+                    logger.warning(f"Invalid topic format: '{sentiment}'")
+                    sentiment = "Unknown : Unknown"
+            logger.debug(f"Detected sentiment: {sentiment}")
+            
+            
+             # Get level 
+            try: 
+                prompt = f"{role_assistant}_level_classification"
+                # Construct the Sentiment  prompt to capture the sentiment using formatted history
+                reply_prompt = PROMPTS[prompt].format(
+                    history=formatted_history,
+                    last_message=content,
+                )
+            except KeyError as e:
+                logger.error(f"KeyError accessing prompt with key {prompt}: {e}")
+                raise
+            except Exception as e:
+                logger.error(f"Unexpected error while formatting the {prompt}: {e}")
+                raise
+            # Call LLM to generate response (assuming `llm_model_func` is available)
+            level = await self.llm_model_func(reply_prompt)
+            if not level or ":" not in level:
+                    logger.warning(f"Invalid topic format: '{level}'")
+                    level = "Unknown : Unknown"
+            logger.debug(f"Detected Level: {level}")
+            
+            
             
             # Construct the prompt for LLM using formatted history
             reply_prompt = PROMPTS[f"{role_assistant}_reply"].format(
@@ -1502,13 +1542,15 @@ class LightRAG:
                 last_message=content,
                 intent=intent,
                 topic=topic,
+                sentiment=sentiment,
+                level=level,
             )
 
             # Call LLM to generate response (assuming `llm_model_func` is available)
             response = await self.llm_model_func(reply_prompt)
 
             ai_suggestions = [AISuggestion(text=response, intent=intent, topic=topic, sub_topic="Unknown", technique="Unknown",
-                                        sentiment="Unknown", level="Unknown")]
+                                        sentiment=sentiment, level=level)]
             new_reply =  CoachMessage(
                 speaker="coach",
                 content=response,
