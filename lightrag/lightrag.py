@@ -1413,7 +1413,7 @@ class LightRAG:
             str | AsyncIterator[str]: The AI-generated response.
         """
         try:
-            logger.debug(f"Param: {param}")
+            # logger.debug(f"Param: {param}")
             # Reply Roles
             role_user = os.getenv("REPLY_ROLE_USER", "student")
             role_assistant = os.getenv("REPLY_ROLE_ASSISTANT", "school_counselor")
@@ -1433,11 +1433,16 @@ class LightRAG:
                     isFinalized=True,
                     timestamp=timestamp
                 )
-
-            # Format conversation history to string for LLM
+            # logger.debug(f"conversation history size before: {conversation_history.__len__()}")
+            if param.history_turns is None:
+                param.history_turns = 5 
+            conversation_history = sorted(conversation_history, key=lambda x: x.get("timestamp", ""), reverse=True)[:param.history_turns]
+            conversation_history = list(reversed(conversation_history))  # maintain chronological order
+           
             # This is a custom function to format the conversation history
             # into a string representation suitable for the LLM prompt
             formatted_history = format_conversation_history(conversation_history)
+            
             # logger.debug(f"Formatted conversation history:\n{formatted_history}")
             
             # Detect missing keys (optional debug log)
@@ -1477,10 +1482,11 @@ class LightRAG:
                 logger.error(f"KeyError accessing prompt with key {role_assistant}_topic_classification: {e}")
                 raise
             except Exception as e:
-                logger.error(f"Unexpected error while formatting the topic prompt: {e}")
+                logger.error(f"Unexpected error while formtting the topic prompt: {e}")
                 raise
             
             # Call LLM to generate response (assuming `llm_model_func` is available)
+            submitted_topic = param.topic
             topic = await self.llm_model_func(topic_reply_prompt)
             logger.debug(f"Detected topic: {topic}")
             if not topic or ":" not in topic:

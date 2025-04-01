@@ -36,7 +36,7 @@ const levelOptions = [
 const formattedTopicOptions = topicOptions.map(option => ({ label: option.trim(), value: option.trim() }));
 const formattedIntentOptions = intentOptions.map(option => ({ label: option.trim(), value: option.trim() }));
 const formattedSentimentOptions = sentimentOptions.map(option => ({ label: option.trim(), value: option.trim() }));
-const formattedTechniqueOptions = techniqueOptions.map(option => ({ label: option.trim(), value: option.trim() }));
+// const formattedTechniqueOptions = techniqueOptions.map(option => ({ label: option.trim(), value: option.trim() }));
 const formattedLevelOptions = levelOptions.map(option => ({ label: option.trim(), value: option.trim() }));
 
 export default function ReplySettings() {
@@ -54,6 +54,7 @@ export default function ReplySettings() {
   const handleChange = useCallback((key: keyof ReplyRequest, value: any) => {
     useSettingsStore.getState().updateReplySettings({ [key]: value })
   }, [])
+  
   // Update getTooltip to only return tooltips for the specified keys
   const getTooltip = (key: TooltipKeys) => {
     return replySettings?.tooltips?.[key] || '';
