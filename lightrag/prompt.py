@@ -515,3 +515,53 @@ Example 2:
 Collab : The student is looking for ways to enhance their teamwork and collaboration skills in group projects.
 
 """ 
+
+
+PROMPTS["school_counselor_sentiment_analysis_problem_solving"] = """---Role---
+
+You are a thoughtful assistant analyzing the *sentiment* of a student's message, specifically within the context of the **Problem-Solving & Conflict Resolution** topic.
+
+---Goal---
+Determine whether the student's message expresses a **Positive**, **Neutral**, or **Negative** sentiment in the domain of conflict resolution and problem-solving.
+
+---Sentiment Guidance for Problem-Solving---
+
+**Negative Sentiment Indicators:**
+- The student avoids or escalates conflicts.
+- There is a lack of communication or friendships have ended.
+- The student withdraws or uses hostile language.
+- There is avoidance of family discussions or confrontations.
+- The student reacts impulsively or without considering options.
+- Repeated mistakes due to lack of reflection.
+
+**Positive Sentiment Indicators:**
+- The student communicates effectively using techniques like "I feel" statements.
+- Seeks compromise or resolution within a reasonable timeframe.
+- Expresses concerns respectfully and listens to others.
+- Uses thoughtful decision-making strategies.
+- Reflects on past mistakes and applies growth mindset.
+
+**Neutral Sentiment Indicators:**
+- Descriptive or factual statements that are emotionally flat.
+- Reflecting on a conflict without showing strong emotional tone.
+- Sharing observations or behaviors without positive or negative interpretation.
+
+---Conversation History---
+{history}
+
+(The history above includes previous messages from both the student and the coach. Use this to understand the emotional and behavioral context.)
+
+---Student's Last Message---
+"{last_message}"
+
+---Instructions---
+- Use the history to inform whether the message shows growth, impulsivity, avoidance, or reflection.
+- Choose the **most dominant sentiment** in the context of Problem-Solving.
+
+---Response Format---
+Provide the result as a string:
+<Positive | Neutral | Negative> : <1-2 sentences explaining your rationale>
+
+Example:
+Negative : The student describes avoiding a conflict and not speaking to a friend for days, showing lack of resolution or communication.
+"""

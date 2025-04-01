@@ -1448,7 +1448,7 @@ class LightRAG:
             # logger.debug(f"Creating intent LLM:\n{content} \n{role_assistant}")   
             # Construct the INTENT  prompt to capture the intent using formatted history
             try:
-                reply_prompt = PROMPTS[f"school_counselor_intent_classification"].format(
+                intent_reply_prompt = PROMPTS[f"{role_assistant}_intent_classification"].format(
                     history=formatted_history,
                     last_message=content,
                 )
@@ -1456,21 +1456,44 @@ class LightRAG:
                 logger.error(f"KeyError accessing prompt with key {role_assistant}_intent_classification: {e}")
                 raise
             except Exception as e:
-                logger.error(f"Unexpected error while formatting the prompt: {e}")
+                logger.error(f"Unexpected error while formatting the intent prompt: {e}")
                 raise
             # logger.debug(f"Done intent and topic classification prompt for LLM\n{reply_prompt}")               
         
             # # Call LLM to generate INTENT response 
-            intent = await self.llm_model_func(reply_prompt)
+            intent = await self.llm_model_func(intent_reply_prompt)
             logger.debug(f"Detected intent: {intent}")
-            # Construct the TOPIC  prompt to capture the sentiment using formatted history
-            reply_prompt = PROMPTS[f"school_counselor_topic_classification"].format(
-                history=formatted_history,
-                last_message=content,
-            )
-
+            
+            try:
+                # Construct the TOPIC  prompt to capture the sentiment using formatted history
+                topic_reply_prompt = PROMPTS[f"{role_assistant}_topic_classification"].format(
+                    history=formatted_history,
+                    last_message=content,
+                )
+            except KeyError as e:
+                logger.error(f"KeyError accessing prompt with key {role_assistant}_topic_classification: {e}")
+                raise
+            except Exception as e:
+                logger.error(f"Unexpected error while formatting the topic prompt: {e}")
+                raise
             # Call LLM to generate response (assuming `llm_model_func` is available)
-            topic = await self.llm_model_func(reply_prompt)
+            topic = await self.llm_model_func(topic_reply_prompt)
+            logger.debug(f"Detected topic: {topic}")
+            
+            try:
+                # Construct the Sentiment  prompt to capture the sentiment using formatted history
+                topic_reply_prompt = PROMPTS[f"{role_assistant}_sentiment_analysis_{topic}"].format(
+                    history=formatted_history,
+                    last_message=content,
+                )
+            except KeyError as e:
+                logger.error(f"KeyError accessing prompt with key {role_assistant}_topic_classification: {e}")
+                raise
+            except Exception as e:
+                logger.error(f"Unexpected error while formatting the topic prompt: {e}")
+                raise
+            # Call LLM to generate response (assuming `llm_model_func` is available)
+            topic = await self.llm_model_func(topic_reply_prompt)
             logger.debug(f"Detected topic: {topic}")
             
             # Construct the prompt for LLM using formatted history
@@ -1478,6 +1501,7 @@ class LightRAG:
                 history=formatted_history,
                 last_message=content,
                 intent=intent,
+                topic=topic,
             )
 
             # Call LLM to generate response (assuming `llm_model_func` is available)
