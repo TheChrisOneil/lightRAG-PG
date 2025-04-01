@@ -245,7 +245,8 @@ class ReplyRequest(BaseModel):
         return [keyword.strip() for keyword in ll_keywords]
 
     def to_reply_params(self, is_stream: bool) -> "ReplyParam":
-        request_data = self.model_dump(exclude_none=True, exclude={"topic", "sub-topic","intent", "sentiment", "technique", "level", "student_name","speaker","content","timestamp","conversation_history"})
+        #request_data = self.model_dump(exclude_none=True, exclude={"topic", "sub-topic","intent", "sentiment", "technique", "level", "student_name","speaker","content","timestamp","conversation_history"})
+        request_data = self.model_dump(exclude_none=True, exclude={"student_name","speaker","content","timestamp","conversation_history"})
         param = ReplyParam(**request_data)
         param.stream = is_stream
         return param
@@ -269,6 +270,7 @@ async def reply_text(
     Handle a POST request at the /coach_reply endpoint to generate a life coach response.
     """
     try:
+        logger.debug(f"Received request: {request.json()}")
         param = request.to_reply_params(False)
         base_coach_msg = await rag.acoach_reply(
             student_name=request.student_name,

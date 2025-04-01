@@ -3,11 +3,41 @@ import { ReplyRequest, QueryRequest } from '@/api/lightrag'
 import Text from '@/components/ui/Text'
 import Input from '@/components/ui/Input'
 import Checkbox from '@/components/ui/Checkbox'
+import Select from 'react-select';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card'
 import { useSettingsStore } from '@/stores/settings'
+import { SingleValue } from 'react-select';
 
 // Define a type that includes only the keys that support tooltips
 type TooltipKeys = 'topic' | 'sub_topic' | 'intent' | 'sentiment' | 'technique' | 'level';
+
+const topicOptions = [
+  'Social', 'Collab', 'Friendship', 'Thinking', 'English', 'Diet', 'Fitness',
+  'Coping', 'Learning', 'Financial', 'Practical', 'Problem-solving', 
+  'Self-aware', 'Self-care', 'Reflection', 'Stress', 'Time', 'Unknown'
+];
+
+const intentOptions = [
+  'Experience', 'Emotion', 'Guidance', 'Unknown'
+];
+
+const sentimentOptions = [
+  'Positive', 'Neutral', 'Negative', 'Unknown'
+];
+
+const techniqueOptions = [
+  'Plow', 'Open', 'Role', 'Stacking', 'Callback', 'Assign', 'Polling', 'Pushpull', 'Unknown'
+];
+
+const levelOptions = [
+  'Attraction', 'Relate', 'Trust', 'Unknown'
+];
+
+const formattedTopicOptions = topicOptions.map(option => ({ label: option.trim(), value: option.trim() }));
+const formattedIntentOptions = intentOptions.map(option => ({ label: option.trim(), value: option.trim() }));
+const formattedSentimentOptions = sentimentOptions.map(option => ({ label: option.trim(), value: option.trim() }));
+const formattedTechniqueOptions = techniqueOptions.map(option => ({ label: option.trim(), value: option.trim() }));
+const formattedLevelOptions = levelOptions.map(option => ({ label: option.trim(), value: option.trim() }));
 
 export default function ReplySettings() {
   // Update namespace in query settings
@@ -118,26 +148,19 @@ export default function ReplySettings() {
               onCheckedChange={(checked) => handleChange('only_need_prompt', checked)}
             />
 
-            <Text
-              className="ml-1"
-              text="Topic"
-              tooltip={getTooltip('topic')}
-              side="left"
-            />
-            <Input
+            <Text className="ml-1" text="Topic" tooltip={getTooltip('topic')} side="left" />
+            <Select
               id="topic"
-              type="text"
-              value={enforceValue(replySettings.topic)}
-              onChange={(e) => handleChange('topic', e.target.value)}
-              placeholder="Enter topic"
+              value={formattedTopicOptions.find(option => option.value === replySettings.topic) || { label: 'Unknown', value: 'Unknown' }}
+              onChange={(newValue) => {
+                if (newValue) {
+                  handleChange('topic', newValue.value);
+                }
+              }}
+              options={formattedTopicOptions}
             />
 
-            <Text
-              className="ml-1"
-              text="Sub Topic"
-              tooltip={getTooltip('sub_topic')}
-              side="left"
-            />
+            <Text className="ml-1" text="Sub Topic" tooltip={getTooltip('sub_topic')} side="left" />
             <Input
               id="sub_topic"
               type="text"
@@ -146,60 +169,52 @@ export default function ReplySettings() {
               placeholder="Enter sub topic"
             />
 
-            <Text
-              className="ml-1"
-              text="Intent"
-              tooltip={getTooltip('intent')}
-              side="left"
-            />
-            <Input
-              id="intent"
-              type="text"
-              value={enforceValue(replySettings.intent)}
-              onChange={(e) => handleChange('intent', e.target.value)}
-              placeholder="Enter intent"
+            <Text className="ml-1" text="Intent" tooltip={getTooltip('intent')} side="left" />
+            <Select
+              id="intent-select"
+              value={formattedIntentOptions.find(option => option.value === replySettings.intent) || { label: 'Unknown', value: 'Unknown' }}
+              onChange={(newValue) => {
+                if (newValue) {
+                  handleChange('intent', newValue.value);
+                }
+              }}
+              options={formattedIntentOptions}
             />
 
-            <Text
-              className="ml-1"
-              text="Sentiment"
-              tooltip={getTooltip('sentiment')}
-              side="left"
-            />
-            <Input
-              id="sentiment"
-              type="text"
-              value={enforceValue(replySettings.sentiment)}
-              onChange={(e) => handleChange('sentiment', e.target.value)}
-              placeholder="Enter sentiment"
+            <Text className="ml-1" text="Sentiment" tooltip={getTooltip('sentiment')} side="left" />
+            <Select
+              id="sentiment-select"
+              value={formattedSentimentOptions.find(option => option.value === replySettings.sentiment) || { label: 'Unknown', value: 'Unknown' }}
+              onChange={(newValue) => {
+                if (newValue) {
+                  handleChange('sentiment', newValue.value);
+                }
+              }}
+              options={formattedSentimentOptions}
             />
 
-            <Text
-              className="ml-1"
-              text="Technique"
-              tooltip={getTooltip('technique')}
-              side="left"
-            />
-            <Input
-              id="technique"
-              type="text"
-              value={enforceValue(replySettings.technique)}
-              onChange={(e) => handleChange('technique', e.target.value)}
-              placeholder="Enter technique"
+            <Text className="ml-1" text="Technique" tooltip={getTooltip('technique')} side="left" />
+            <Select
+              id="technique-select"
+              value={formattedTechniqueOptions.find(option => option.value === replySettings.technique) || { label: 'Unknown', value: 'Unknown' }}
+              onChange={(newValue) => {
+                if (newValue) {
+                  handleChange('technique', newValue.value);
+                }
+              }}
+              options={formattedTechniqueOptions}
             />
 
-            <Text
-              className="ml-1"
-              text="Level"
-              tooltip={getTooltip('level')}
-              side="left"
-            />
-            <Input
-              id="level"
-              type="text"
-              value={enforceValue(replySettings.level)}
-              onChange={(e) => handleChange('level', e.target.value)}
-              placeholder="Enter level"
+            <Text className="ml-1" text="Level" tooltip={getTooltip('level')} side="left" />
+            <Select
+              id="level-select"
+              value={formattedLevelOptions.find(option => option.value === replySettings.level) || { label: 'Unknown', value: 'Unknown' }}
+              onChange={(newValue) => {
+                if (newValue) {
+                  handleChange('level', newValue.value);
+                }
+              }}
+              options={formattedLevelOptions}
             />
 
             <Text className="ml-1" text="Top K" side="left" />

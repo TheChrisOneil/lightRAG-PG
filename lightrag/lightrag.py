@@ -1413,6 +1413,7 @@ class LightRAG:
             str | AsyncIterator[str]: The AI-generated response.
         """
         try:
+            logger.debug(f"Param: {param}")
             # Reply Roles
             role_user = os.getenv("REPLY_ROLE_USER", "student")
             role_assistant = os.getenv("REPLY_ROLE_ASSISTANT", "school_counselor")
@@ -1437,14 +1438,14 @@ class LightRAG:
             # This is a custom function to format the conversation history
             # into a string representation suitable for the LLM prompt
             formatted_history = format_conversation_history(conversation_history)
-            logger.debug(f"Formatted conversation history:\n{formatted_history}")
+            # logger.debug(f"Formatted conversation history:\n{formatted_history}")
             
             # Detect missing keys (optional debug log)
             # missing_keys_report = find_missing_keys_in_history(conversation_history)
             # if missing_keys_report:
             #    logger.warning(f"Missing keys detected in conversation history:\n" + "\n".join(missing_keys_report))
 
-            logger.debug(f"Creating intent LLM:\n{content} \n{role_assistant}")   
+            # logger.debug(f"Creating intent LLM:\n{content} \n{role_assistant}")   
             # Construct the INTENT  prompt to capture the intent using formatted history
             try:
                 reply_prompt = PROMPTS[f"school_counselor_intent_classification"].format(
@@ -1457,11 +1458,11 @@ class LightRAG:
             except Exception as e:
                 logger.error(f"Unexpected error while formatting the prompt: {e}")
                 raise
-            logger.debug(f"Done intent and topic classification prompt for LLM\n{reply_prompt}")               
+            # logger.debug(f"Done intent and topic classification prompt for LLM\n{reply_prompt}")               
         
             # # Call LLM to generate INTENT response 
             intent = await self.llm_model_func(reply_prompt)
-
+            logger.debug(f"Detected intent: {intent}")
             # Construct the TOPIC  prompt to capture the sentiment using formatted history
             reply_prompt = PROMPTS[f"school_counselor_topic_classification"].format(
                 history=formatted_history,
@@ -1482,8 +1483,8 @@ class LightRAG:
             # Call LLM to generate response (assuming `llm_model_func` is available)
             response = await self.llm_model_func(reply_prompt)
 
-            ai_suggestions = [AISuggestion(text=response, intent=intent, topic=topic, 
-                                        sentiment="N/A", level="N/A")]
+            ai_suggestions = [AISuggestion(text=response, intent=intent, topic=topic, sub_topic="Unknown", technique="Unknown",
+                                        sentiment="Unknown", level="Unknown")]
             new_reply =  CoachMessage(
                 speaker="coach",
                 content=response,

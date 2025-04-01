@@ -397,7 +397,7 @@ B. Guidance-Based Intent (Coaching & Problem-Solving)
   - Goal-Oriented: “How can I improve my study habits?”
   - Problem-Solving: “I keep procrastinating. What should I do?”
 
-C. Experience Sharing Intent (Reflection & Growth)
+C. Experience-Sharing Intent (Reflection & Growth)
 - Goal: Encourage students to reflect on their experiences before moving into structured guidance.
 - Common Examples:
   - Personal Reflection: “I had a tough day at soccer practice.”
@@ -417,7 +417,7 @@ C. Experience Sharing Intent (Reflection & Growth)
 - Select the most dominant intent among Empathy, Guidance, or Experience Sharing.
 
 ---Response Format---
-Provide the result as a string using ":" to separate the intent from the explanation.
+Provide the result as a string using ":" to separate the intent from the explanation. Only Emotion | Guidance | Experience can be selected.
 <Emotion | Guidance | Experience> : <1-2 sentences explaining your rationale>
 
 Example 1:
@@ -426,6 +426,9 @@ Example 2:
 Guidance : The student is looking for advice on improving study habits, indicating a guidance-based intent.
 Example 3:
 Experience : The student shares a personal experience about a tough day at soccer practice, indicating an experience-sharing intent.
+Example 4:
+Experience : The student reflects on a situation with a teacher, indicating an experience-sharing intent before seeking guidance.
+
 """
 
 PROMPTS["school_counselor_topic_classification"] = """---Role---

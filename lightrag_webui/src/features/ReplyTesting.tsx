@@ -114,12 +114,12 @@ export default function ReplyTesting() {
           const bestSuggestion = response.coachMessage?.aiSuggestions?.[0];
           if (bestSuggestion) {
             setReplySettings({
-              intent: bestSuggestion.intent?.split(':')[0] || 'Unknown',
-              sentiment: bestSuggestion.sentiment?.split(':')[0] || 'Unknown',
-              topic: bestSuggestion.topic?.split(':')[0] || 'Unknown',
-              sub_topic: bestSuggestion.sub_topic?.split(':')[0] || 'Unknown',
-              technique: bestSuggestion.technique?.split(':')[0] || 'Unknown',
-              level: bestSuggestion.level?.split(':')[0] || 'Unknown',
+              intent: bestSuggestion.intent?.split(':')[0]?.trim() || 'Unknown',
+              sentiment: bestSuggestion.sentiment?.split(':')[0]?.trim() || 'Unknown',
+              topic: bestSuggestion.topic?.split(':')[0]?.trim() || 'Unknown',
+              sub_topic: bestSuggestion.sub_topic?.split(':')[0]?.trim() || 'Unknown',
+              technique: bestSuggestion.technique?.split(':')[0]?.trim() || 'Unknown',
+              level: bestSuggestion.level?.split(':')[0]?.trim() || 'Unknown',
               tooltips: {
                 intent: bestSuggestion.intent?.split(':')[1]?.trim() || '',
                 sentiment: bestSuggestion.sentiment?.split(':')[1]?.trim() || '',
