@@ -223,13 +223,20 @@ axiosInstance.interceptors.request.use((config) => {
   if (namespace) {
     config.headers['x-namespace'] = namespace
   }
-  config.headers['Content-Type'] = 'application/json'
+  // Set Content-Type only if not already specified
+  if (!config.headers['Content-Type']) {
+    config.headers['Content-Type'] = 'application/json'
+  }
+  console.log('Interceptor Modified Request:', config);
   return config
 })
 
-// Interceptor：hanle error
+// Interceptor：handle error
 axiosInstance.interceptors.response.use(
-  (response) => response,
+  (response) => {
+    console.log('Interceptor Response:', response);
+    return response;
+  },
   (error: AxiosError) => {
     if (error.response) {
       throw new Error(
@@ -366,23 +373,31 @@ export const uploadDocument = async (
   file: File,
   onUploadProgress?: (percentCompleted: number) => void
 ): Promise<DocActionResponse> => {
-  const formData = new FormData()
-  formData.append('file', file)
+  console.log('uploadDocument: Received file:', file);
+  const formData = new FormData();
+  formData.append('file', file);
+  console.log('uploadDocument: FormData after appending file:', formData);
 
-  const response = await axiosInstance.post('/documents/upload', formData, {
-    headers: {
-      'Content-Type': 'multipart/form-data'
-    },
-    // prettier-ignore
-    onUploadProgress:
-      onUploadProgress !== undefined
-        ? (progressEvent) => {
-          const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total!)
-          onUploadProgress(percentCompleted)
-        }
-        : undefined
-  })
-  return response.data
+  console.log('uploadDocument: Starting axios request to /documents/upload');
+  try {
+    const response = await axiosInstance.post('/documents/upload', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data'
+      },
+      // prettier-ignore
+      onUploadProgress:
+        onUploadProgress !== undefined
+          ? (progressEvent) => {
+            const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total!);
+            onUploadProgress(percentCompleted);
+          } : undefined
+    });
+    console.log('uploadDocument: Axios request successful, response:', response);
+    return response.data;
+  } catch (error) {
+    console.error('uploadDocument: Axios request failed:', error);
+    throw error;
+  }
 }
 
 export const batchUploadDocuments = async (

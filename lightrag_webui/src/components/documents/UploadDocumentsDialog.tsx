@@ -25,10 +25,11 @@ export default function UploadDocumentsDialog() {
   const handleDocumentsUpload = useCallback(
     async (filesToUpload: File[]) => {
       setIsUploading(true)
-
+      console.log('Initial file list for upload:', filesToUpload)
       try {
         await Promise.all(
           filesToUpload.map(async (file) => {
+            console.log('Starting upload for file:', file.name)
             try {
               const result = await uploadDocument(
                 file,
@@ -41,16 +42,20 @@ export default function UploadDocumentsDialog() {
                 }
               )
               if (result.status === 'success') {
+                console.log(`Upload result for ${file.name}: Success`)
                 toast.success(`Upload Success:\n${file.name} uploaded successfully`)
               } else {
+                console.log(`Upload result for ${file.name}: Failed - ${result.message}`)
                 toast.error(`Upload Failed:\n${file.name}\n${result.message}`)
               }
             } catch (err) {
+              console.error(`Error during upload of ${file.name}:`, err)
               toast.error(`Upload Failed:\n${file.name}\n${errorMessage(err)}`)
             }
           })
         )
       } catch (err) {
+        console.error('Error during batch upload:', err)
         toast.error('Upload Failed\n' + errorMessage(err))
       } finally {
         setIsUploading(false)

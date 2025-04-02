@@ -372,6 +372,7 @@ Sentiment : with a description of the sentiment
 Level : with a description of the level
 {level}
 
+
 ---Response Rules---
 - **Acknowledge** the student's message before responding.
 - **Keep the conversation flowing** by asking a relevant follow-up question.
@@ -530,7 +531,6 @@ Example 1:
 Social : The student expresses concerns about their social skills and seeks advice on how to improve their interactions with peers.
 Example 2:  
 Collab : The student is looking for ways to enhance their teamwork and collaboration skills in group projects.
-
 """ 
 
 PROMPTS["school_counselor_sentiment_unknown"] = """---Role---
