@@ -1,0 +1,53 @@
+version: '3.8'
+
+services:
+  lightrag:
+    # restart: always
+    build:
+      context: .
+      dockerfile: Dockerfile
+      platforms:
+        - linux/arm64
+    image: my-python-app
+    ports:
+      - "${PORT:-9621}:9621"
+    volumes:
+      - ./data/rag_storage:/app/data/rag_storage
+      - ./data/inputs:/app/data/inputs
+      - ./.env:/app/.env
+      - ./data/logs:/app/lightrag.logs
+    env_file:
+      - .env
+    environment:
+      DATABASE_URL: "postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}"
+    depends_on:
+      postgres:
+        condition: service_healthy  # Ensures PostgreSQL is ready before starting
+
+
+  postgres:
+    #image: pgvector/pgvector:pg17
+    build:
+      context: ./postgres-init_tnc
+      dockerfile: Dockerfile
+    container_name: postgres_container
+    restart: always
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DATABASE}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./postgres-init_tnc/init_tnc.sql:/docker-entrypoint-initdb.d/init.sql
+    healthcheck:
+      test: ["CMD", "pg_isready", "-d", "${POSTGRES_DATABASE}", "-U", "${POSTGRES_USER}"]
+      interval: 5s
+      retries: 5  
+    env_file:
+      - .env  # Loads credentials from the .env file
+
+volumes:
+  postgres_data:
+    driver: local
