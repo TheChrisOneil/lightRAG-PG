@@ -15,7 +15,6 @@ export default defineConfig({
   // base: import.meta.env.VITE_BASE_URL || '/webui/',
   base: webuiPrefix,
   build: {
-    // outDir: path.resolve(__dirname, '../../../lightrag-pg/lightrag/api/webui'), // Tech Nexus Clarity
     outDir: path.resolve(__dirname, '../lightrag/api/webui'), // Tech Nexus Clarity 
     emptyOutDir: true
   },
