@@ -38,6 +38,8 @@ export type ReplyRequest = {
     speaker: 'student' | 'patient'
     content: string
     timestamp: string
+    response_format: string
+    prompt: 'Default' | 'Tim'
     topic?: string
     sub_topic?: string
     intent?: string

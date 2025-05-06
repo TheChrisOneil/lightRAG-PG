@@ -35,6 +35,8 @@ export interface ReplyParams {
     speaker: 'student' | 'patient'
     content: string
     namespace: string | undefined
+    response_format: 'HS Text' | 'Professional Text' // Added response_format
+    prompt: 'Default' | 'Tim' 
     tooltips?: {
       topic?: string
       sub_topic?: string
@@ -43,7 +45,7 @@ export interface ReplyParams {
       technique?: string
       level?: string
     }
-  }
+}
 
 
 interface CustomSettingsState {
@@ -66,6 +68,8 @@ export const useCustomSettingsStore = create<CustomSettingsState>()(
       setDialogTurns: (turns: DialogTurn[]) => set({ dialogTurns: turns }),
       replySettings: {
         mode: 'hybrid',
+        response_format: 'HS Text',
+        prompt: 'Default',
         only_need_context: false,
         only_need_prompt: false,
         topic: 'Unknown',

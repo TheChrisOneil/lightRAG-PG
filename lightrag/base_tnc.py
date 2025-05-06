@@ -79,6 +79,11 @@ class ReplyParam:
     - "naive": Performs a basic search without advanced techniques.
     - "mix": Integrates knowledge graph and vector retrieval.
     """
+    prompt: str = "default"
+    """The prompt template for generating responses. Default is 'default'."""
+    
+    response_format: str = "HS Text"
+    """The format of the response. Default is 'default'."""
 
     only_need_context: bool = False
     """If True, only returns the retrieved context without generating a response."""

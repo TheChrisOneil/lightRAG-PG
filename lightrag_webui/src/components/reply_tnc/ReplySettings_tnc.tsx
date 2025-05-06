@@ -41,6 +41,22 @@ const levelOptions = [
   'Attraction', 'Relate', 'Trust', 'Unknown'
 ];
 
+
+const queryModeOptions = [
+  'Mix', 'Hybrid', 'Global', 'Local', 'Naive', 'Unknown'
+];
+
+const responseFormatOptions = [
+  'Text Short Hand', 'Professional'
+];
+
+const promptOptions = [
+  'Default', 'Tim', 
+];
+
+const formattedQueryModeOptions = queryModeOptions.map(option => ({ label: option.trim(), value: option.trim() }));
+const formattedResponseFormatOptions = responseFormatOptions.map(option => ({ label: option.trim(), value: option.trim() }));
+const formattedPromptOptions = promptOptions.map(option => ({ label: option.trim(), value: option.trim() }));
 const formattedTopicOptions = topicOptions.map(option => ({ label: option.trim(), value: option.trim() }));
 const formattedIntentOptions = intentOptions.map(option => ({ label: option.trim(), value: option.trim() }));
 const formattedSentimentOptions = sentimentOptions.map(option => ({ label: option.trim(), value: option.trim() }));
@@ -99,16 +115,45 @@ export default function ReplySettings() {
               placeholder="Enter student name"
             />
 
-            {/*
-            <Text className="ml-1" text="Sub Topic" tooltip={getTooltip('sub_topic')} side="left" />
-            <Input
-              id="sub_topic"
-              type="text"
-              value={enforceValue(replySettings.sub_topic)}
-              onChange={(e) => handleChange('sub_topic', e.target.value)}
-              placeholder="Enter sub topic"
+
+            {/* New Query Mode Setting */}
+            <Text className="ml-1" text="Query Mode" tooltip="Select the query mode for the reply" side="left" />
+            <Select
+              id="query-mode-select"
+              value={formattedQueryModeOptions.find(option => option.value === replySettings.mode) || { label: 'Unknown', value: 'Unknown' }}
+              onChange={(newValue) => {
+                if (newValue) {
+                  handleChange('mode', newValue.value);
+                }
+              }}
+              options={formattedQueryModeOptions}
             />
-            */}
+
+            {/* New Response Format Setting */}
+            <Text className="ml-1" text="Response Format" tooltip="Select the format of the response" side="left" />
+            <Select
+              id="response-format-select"
+              value={formattedResponseFormatOptions.find(option => option.value === replySettings.response_format) || { label: 'Unknown', value: 'Unknown' }}
+              onChange={(newValue) => {
+                if (newValue) {
+                  handleChange('response_format', newValue.value);
+                }
+              }}
+              options={formattedResponseFormatOptions}
+            />
+
+            {/* New Prompt Dropdown Setting */}
+            <Text className="ml-1" text="Prompt" tooltip="Select a predefined prompt for the reply" side="left" />
+            <Select
+              id="prompt-select"
+              value={formattedPromptOptions.find(option => option.value === replySettings.prompt) || { label: 'Unknown', value: 'Unknown' }}
+              onChange={(newValue) => {
+                if (newValue) {
+                  handleChange('prompt', newValue.value);
+                }
+              }}
+              options={formattedPromptOptions}
+            />
 
             <Text className="ml-1" text="Topic" tooltip={getTooltip('topic')} side="left" />
             <Select

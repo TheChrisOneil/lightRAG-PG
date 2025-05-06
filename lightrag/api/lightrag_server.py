@@ -43,6 +43,7 @@ from lightrag.api.routers.graph_routes import create_graph_routes
 from lightrag.api.routers.ollama_api import OllamaAPI
 
 from lightrag.api.routers.reply_routes_tnc import create_reply_routes #TNC addition
+from lightrag.api.routers.prompt_routes_tnc import create_prompt_routes #TNC addition
 
 from lightrag.utils import logger, set_verbose_debug
 from lightrag.kg.shared_storage import (
@@ -415,8 +416,8 @@ def create_app(args):
     
     # Set up RAG factory instead of instantiating LightRAG directly I am ignoring the azure_openai
     # binding for now
-    app.state.rag_factory_sync = lambda workspace="default": LightRAG(
-        working_dir=args.working_dir,
+    app.state.rag_factory_sync = lambda workspace="default": LightRAG( # TNC addition
+        working_dir=args.working_dir, 
         llm_model_func=lollms_model_complete
         if args.llm_binding == "lollms"
         else ollama_model_complete
@@ -456,7 +457,7 @@ def create_app(args):
     )
     
     # Async version includes initialization and eviction logic
-    async def async_rag_factory(workspace="default") -> LightRAG:
+    async def async_rag_factory(workspace="default") -> LightRAG:  # TNC addition
         MAX_RAG_INSTANCES = int(os.getenv("MAX_RAG_INSTANCES", 2))
         if not hasattr(app.state, "rag_instances"):
             app.state.rag_instances = {}
@@ -489,7 +490,7 @@ def create_app(args):
 
         return rag
 
-    app.state.rag_factory = async_rag_factory
+    app.state.rag_factory = async_rag_factory # TNC addition
     # Add routes
     # app.include_router(create_document_routes(rag, doc_manager, api_key))
     # app.include_router(create_query_routes(rag, api_key, args.top_k))
@@ -500,6 +501,7 @@ def create_app(args):
     app.include_router(create_query_routes(api_key, args.top_k))
     app.include_router(create_graph_routes(api_key))
     app.include_router(create_reply_routes(api_key))
+    app.include_router(create_prompt_routes())
     
     # Add Ollama API routes
     # ollama_api = OllamaAPI(rag, top_k=args.top_k, api_key=api_key)
