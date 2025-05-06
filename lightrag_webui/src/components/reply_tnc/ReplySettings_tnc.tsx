@@ -8,8 +8,8 @@
  * Owner: TechNexusClarity
  */
 
-import { useCallback } from 'react'
-import { ReplyRequest } from '@/api/lightrag_tnc'
+import { useCallback, useEffect, useState } from 'react'
+import { ReplyRequest, fetchPromptOptions } from '@/api/lightrag_tnc'
 import Text from '@/components/ui/Text'
 import Input from '@/components/ui/Input'
 import Select from 'react-select';
@@ -51,12 +51,12 @@ const responseFormatOptions = [
 ];
 
 const promptOptions = [
-  'Default', 'Tim', 
+  'Default'
 ];
 
 const formattedQueryModeOptions = queryModeOptions.map(option => ({ label: option.trim(), value: option.trim() }));
 const formattedResponseFormatOptions = responseFormatOptions.map(option => ({ label: option.trim(), value: option.trim() }));
-const formattedPromptOptions = promptOptions.map(option => ({ label: option.trim(), value: option.trim() }));
+let formattedPromptOptions = promptOptions.map(option => ({ label: option.trim(), value: option.trim() }));
 const formattedTopicOptions = topicOptions.map(option => ({ label: option.trim(), value: option.trim() }));
 const formattedIntentOptions = intentOptions.map(option => ({ label: option.trim(), value: option.trim() }));
 const formattedSentimentOptions = sentimentOptions.map(option => ({ label: option.trim(), value: option.trim() }));
@@ -76,6 +76,37 @@ export default function ReplySettings() {
   const getTooltip = (key: TooltipKeys) => {
     return replySettings?.tooltips?.[key] || '';
   };
+  // State for dynamically fetched prompt options
+  const [promptOptions, setPromptOptions] = useState<{ label: string; value: string }[]>([]);
+  formattedPromptOptions = promptOptions;
+  useEffect(() => {
+    const loadPromptOptions = async () => {
+      try {
+        const options = await fetchPromptOptions();
+
+        // Filter options to only include names matching the pattern "school_counselor_*_reply"
+        const filteredOptions = options
+          .filter((option) => /^school_counselor_.*_reply$/.test(option.value.trim()))
+          .map((option) => {
+            // Extract the middle portion (.*) using a capturing group
+            const match = option.value.trim().match(/^school_counselor_(.*)_reply$/);
+            return match
+              ? { label: match[1], value: match[1] } // Use the captured group for label and value
+              : null;
+          })
+          .filter((option) => option !== null); // Remove any null values
+
+        // Debugging: Log the filtered options to verify the transformation
+        console.log('Filtered options:', filteredOptions);
+
+        setPromptOptions(filteredOptions as { label: string; value: string }[]); // Update state with filtered options
+      } catch (error) {
+        console.error('Failed to load prompt options:', error);
+      }
+    };
+
+    loadPromptOptions();
+  }, []);
 
   return (
     <Card className="flex shrink-0 flex-col">

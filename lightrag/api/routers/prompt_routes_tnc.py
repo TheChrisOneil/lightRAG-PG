@@ -57,6 +57,12 @@ def create_prompt_routes():
     def get_all_prompts():
         """Retrieve all prompts."""
         return load_prompts()
+    
+    @router.get("/prompt/keys", response_model=list[str])
+    def get_all_prompt_keys():
+        """Retrieve all prompt keys."""
+        prompts = load_prompts()
+        return list(prompts.keys())
 
     @router.get("/prompts/{prompt_key}", response_model=str)
     def get_prompt(prompt_key: str):
@@ -68,7 +74,7 @@ def create_prompt_routes():
 
     @router.post("/prompts")
     def create_prompt(request: CreatePromptRequest):
-        """Create a new prompt."""
+        """Create a new prompt. Use the naming convention school_counselor_<insert your prompt name>_reply to avoid conflicts."""
         prompts = load_prompts()
         if request.prompt_key in prompts:
             raise HTTPException(status_code=400, detail=f"Prompt '{request.prompt_key}' already exists.")
