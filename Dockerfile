@@ -1,5 +1,5 @@
 # Use arm64 Python base image
-FROM arm64v8/python:3.10-slim as builder
+FROM python:3.10-slim as builder
 
 WORKDIR /app
 
@@ -40,7 +40,7 @@ RUN pip install --no-cache-dir --prefer-binary -r /app/requirements.txt
 RUN pip install --no-cache-dir --prefer-binary -r /app/lightrag/api/requirements.txt
 
 # Final stage: Use a smaller runtime image
-FROM arm64v8/python:3.10-slim
+FROM python:3.10-slim
 
 WORKDIR /app
 
