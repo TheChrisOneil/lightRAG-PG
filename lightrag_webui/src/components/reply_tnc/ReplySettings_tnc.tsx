@@ -151,7 +151,7 @@ export default function ReplySettings() {
             <Text className="ml-1" text="Query Mode" tooltip="Select the query mode for the reply" side="left" />
             <Select
               id="query-mode-select"
-              value={formattedQueryModeOptions.find(option => option.value === replySettings.mode) || { label: 'Unknown', value: 'Unknown' }}
+              value={formattedQueryModeOptions.find(option => option.value === replySettings.mode) || formattedQueryModeOptions[0]}
               onChange={(newValue) => {
                 if (newValue) {
                   handleChange('mode', newValue.value);
@@ -164,7 +164,7 @@ export default function ReplySettings() {
             <Text className="ml-1" text="Response Format" tooltip="Select the format of the response" side="left" />
             <Select
               id="response-format-select"
-              value={formattedResponseFormatOptions.find(option => option.value === replySettings.response_format) || { label: 'Unknown', value: 'Unknown' }}
+              value={formattedResponseFormatOptions.find(option => option.value === replySettings.response_format) || formattedResponseFormatOptions[0]}
               onChange={(newValue) => {
                 if (newValue) {
                   handleChange('response_format', newValue.value);
@@ -177,7 +177,7 @@ export default function ReplySettings() {
             <Text className="ml-1" text="Prompt" tooltip="Select a predefined prompt for the reply" side="left" />
             <Select
               id="prompt-select"
-              value={formattedPromptOptions.find(option => option.value === replySettings.prompt) || { label: 'Unknown', value: 'Unknown' }}
+              value={formattedPromptOptions.find(option => option.value === replySettings.prompt) || formattedPromptOptions[0]}
               onChange={(newValue) => {
                 if (newValue) {
                   handleChange('prompt', newValue.value);
@@ -189,7 +189,7 @@ export default function ReplySettings() {
             <Text className="ml-1" text="Topic" tooltip={getTooltip('topic')} side="left" />
             <Select
               id="topic"
-              value={formattedTopicOptions.find(option => option.value === replySettings.topic) || { label: 'Unknown', value: 'Unknown' }}
+              value={formattedTopicOptions.find(option => option.value === replySettings.topic) || formattedTopicOptions[0]}
               onChange={(newValue) => {
                 if (newValue) {
                   handleChange('topic', newValue.value);
@@ -201,7 +201,7 @@ export default function ReplySettings() {
             <Text className="ml-1" text="Intent" tooltip={getTooltip('intent')} side="left" />
             <Select
               id="intent-select"
-              value={formattedIntentOptions.find(option => option.value === replySettings.intent) || { label: 'Unknown', value: 'Unknown' }}
+              value={formattedIntentOptions.find(option => option.value === replySettings.intent) || formattedIntentOptions[0]}
               onChange={(newValue) => {
                 if (newValue) {
                   handleChange('intent', newValue.value);
@@ -213,7 +213,7 @@ export default function ReplySettings() {
             <Text className="ml-1" text="Sentiment" tooltip={getTooltip('sentiment')} side="left" />
             <Select
               id="sentiment-select"
-              value={formattedSentimentOptions.find(option => option.value === replySettings.sentiment) || { label: 'Unknown', value: 'Unknown' }}
+              value={formattedSentimentOptions.find(option => option.value === replySettings.sentiment) || formattedSentimentOptions[0]}
               onChange={(newValue) => {
                 if (newValue) {
                   handleChange('sentiment', newValue.value);
@@ -237,7 +237,7 @@ export default function ReplySettings() {
             <Text className="ml-1" text="Level" tooltip={getTooltip('level')} side="left" />
             <Select
               id="level-select"
-              value={formattedLevelOptions.find(option => option.value === replySettings.level) || { label: 'Unknown', value: 'Unknown' }}
+              value={formattedLevelOptions.find(option => option.value === replySettings.level) || formattedLevelOptions[0]}
               onChange={(newValue) => {
                 if (newValue) {
                   handleChange('level', newValue.value);
