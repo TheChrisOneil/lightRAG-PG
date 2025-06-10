@@ -8,7 +8,6 @@ from pydantic import BaseModel, Field
 WORKING_DIR = os.getenv("WORKING_DIR", "./data/rag_storage")
 PROMPT_FILE_PATH = os.path.join(WORKING_DIR, "prompt_coach_reply_tnc.py")
 
-
 def load_prompts() -> Dict[str, Any]:
     """Load the PROMPT_COACH dictionary from the file."""
     if not os.path.exists(PROMPT_FILE_PATH):
