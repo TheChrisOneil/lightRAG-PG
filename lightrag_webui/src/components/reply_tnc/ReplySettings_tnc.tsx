@@ -8,8 +8,8 @@
  * Owner: TechNexusClarity
  */
 
-import { useCallback } from 'react'
-import { ReplyRequest } from '@/api/lightrag_tnc'
+import { useCallback, useEffect, useState } from 'react'
+import { ReplyRequest, fetchPromptOptions } from '@/api/lightrag_tnc'
 import Text from '@/components/ui/Text'
 import Input from '@/components/ui/Input'
 import Select from 'react-select';
@@ -41,6 +41,22 @@ const levelOptions = [
   'Attraction', 'Relate', 'Trust', 'Unknown'
 ];
 
+
+const queryModeOptions = [
+  'Mix', 'Hybrid', 'Global', 'Local', 'Naive', 'Unknown'
+];
+
+const responseFormatOptions = [
+  'Text Short Hand', 'Professional'
+];
+
+const promptOptions = [
+  'Default'
+];
+
+const formattedQueryModeOptions = queryModeOptions.map(option => ({ label: option.trim(), value: option.trim() }));
+const formattedResponseFormatOptions = responseFormatOptions.map(option => ({ label: option.trim(), value: option.trim() }));
+let formattedPromptOptions = promptOptions.map(option => ({ label: option.trim(), value: option.trim() }));
 const formattedTopicOptions = topicOptions.map(option => ({ label: option.trim(), value: option.trim() }));
 const formattedIntentOptions = intentOptions.map(option => ({ label: option.trim(), value: option.trim() }));
 const formattedSentimentOptions = sentimentOptions.map(option => ({ label: option.trim(), value: option.trim() }));
@@ -60,6 +76,37 @@ export default function ReplySettings() {
   const getTooltip = (key: TooltipKeys) => {
     return replySettings?.tooltips?.[key] || '';
   };
+  // State for dynamically fetched prompt options
+  const [promptOptions, setPromptOptions] = useState<{ label: string; value: string }[]>([]);
+  formattedPromptOptions = promptOptions;
+  useEffect(() => {
+    const loadPromptOptions = async () => {
+      try {
+        const options = await fetchPromptOptions();
+
+        // Filter options to only include names matching the pattern "school_counselor_*_reply"
+        const filteredOptions = options
+          .filter((option) => /^school_counselor_.*_reply$/.test(option.value.trim()))
+          .map((option) => {
+            // Extract the middle portion (.*) using a capturing group
+            const match = option.value.trim().match(/^school_counselor_(.*)_reply$/);
+            return match
+              ? { label: match[1], value: match[1] } // Use the captured group for label and value
+              : null;
+          })
+          .filter((option) => option !== null); // Remove any null values
+
+        // Debugging: Log the filtered options to verify the transformation
+        console.log('Filtered options:', filteredOptions);
+
+        setPromptOptions(filteredOptions as { label: string; value: string }[]); // Update state with filtered options
+      } catch (error) {
+        console.error('Failed to load prompt options:', error);
+      }
+    };
+
+    loadPromptOptions();
+  }, []);
 
   return (
     <Card className="flex shrink-0 flex-col">
@@ -99,21 +146,50 @@ export default function ReplySettings() {
               placeholder="Enter student name"
             />
 
-            {/*
-            <Text className="ml-1" text="Sub Topic" tooltip={getTooltip('sub_topic')} side="left" />
-            <Input
-              id="sub_topic"
-              type="text"
-              value={enforceValue(replySettings.sub_topic)}
-              onChange={(e) => handleChange('sub_topic', e.target.value)}
-              placeholder="Enter sub topic"
+
+            {/* New Query Mode Setting */}
+            <Text className="ml-1" text="Query Mode" tooltip="Select the query mode for the reply" side="left" />
+            <Select
+              id="query-mode-select"
+              value={formattedQueryModeOptions.find(option => option.value === replySettings.mode) || formattedQueryModeOptions[0]}
+              onChange={(newValue) => {
+                if (newValue) {
+                  handleChange('mode', newValue.value);
+                }
+              }}
+              options={formattedQueryModeOptions}
             />
-            */}
+
+            {/* New Response Format Setting */}
+            <Text className="ml-1" text="Response Format" tooltip="Select the format of the response" side="left" />
+            <Select
+              id="response-format-select"
+              value={formattedResponseFormatOptions.find(option => option.value === replySettings.response_format) || formattedResponseFormatOptions[0]}
+              onChange={(newValue) => {
+                if (newValue) {
+                  handleChange('response_format', newValue.value);
+                }
+              }}
+              options={formattedResponseFormatOptions}
+            />
+
+            {/* New Prompt Dropdown Setting */}
+            <Text className="ml-1" text="Prompt" tooltip="Select a predefined prompt for the reply" side="left" />
+            <Select
+              id="prompt-select"
+              value={formattedPromptOptions.find(option => option.value === replySettings.prompt) || formattedPromptOptions[0]}
+              onChange={(newValue) => {
+                if (newValue) {
+                  handleChange('prompt', newValue.value);
+                }
+              }}
+              options={formattedPromptOptions}
+            />
 
             <Text className="ml-1" text="Topic" tooltip={getTooltip('topic')} side="left" />
             <Select
               id="topic"
-              value={formattedTopicOptions.find(option => option.value === replySettings.topic) || { label: 'Unknown', value: 'Unknown' }}
+              value={formattedTopicOptions.find(option => option.value === replySettings.topic) || formattedTopicOptions[0]}
               onChange={(newValue) => {
                 if (newValue) {
                   handleChange('topic', newValue.value);
@@ -125,7 +201,7 @@ export default function ReplySettings() {
             <Text className="ml-1" text="Intent" tooltip={getTooltip('intent')} side="left" />
             <Select
               id="intent-select"
-              value={formattedIntentOptions.find(option => option.value === replySettings.intent) || { label: 'Unknown', value: 'Unknown' }}
+              value={formattedIntentOptions.find(option => option.value === replySettings.intent) || formattedIntentOptions[0]}
               onChange={(newValue) => {
                 if (newValue) {
                   handleChange('intent', newValue.value);
@@ -137,7 +213,7 @@ export default function ReplySettings() {
             <Text className="ml-1" text="Sentiment" tooltip={getTooltip('sentiment')} side="left" />
             <Select
               id="sentiment-select"
-              value={formattedSentimentOptions.find(option => option.value === replySettings.sentiment) || { label: 'Unknown', value: 'Unknown' }}
+              value={formattedSentimentOptions.find(option => option.value === replySettings.sentiment) || formattedSentimentOptions[0]}
               onChange={(newValue) => {
                 if (newValue) {
                   handleChange('sentiment', newValue.value);
@@ -161,7 +237,7 @@ export default function ReplySettings() {
             <Text className="ml-1" text="Level" tooltip={getTooltip('level')} side="left" />
             <Select
               id="level-select"
-              value={formattedLevelOptions.find(option => option.value === replySettings.level) || { label: 'Unknown', value: 'Unknown' }}
+              value={formattedLevelOptions.find(option => option.value === replySettings.level) || formattedLevelOptions[0]}
               onChange={(newValue) => {
                 if (newValue) {
                   handleChange('level', newValue.value);

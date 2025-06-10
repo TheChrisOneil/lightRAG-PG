@@ -38,6 +38,8 @@ export type ReplyRequest = {
     speaker: 'student' | 'patient'
     content: string
     timestamp: string
+    response_format: string
+    prompt: string
     topic?: string
     sub_topic?: string
     intent?: string
@@ -156,3 +158,22 @@ export const coachReplyTextStream = async (
     if (onError) onError(message)
   }
 }
+
+export const fetchPromptOptions = async (): Promise<{ label: string; value: string }[]> => {
+  try {
+    // Make an API call to fetch the prompt keys
+    const response = await axiosInstance.get('/prompt/keys');
+    const promptKeys: string[] = response.data; // API returns a list of strings
+
+    // Format the prompt keys into an array of { label, value } objects
+    const formattedOptions = promptKeys.map((key) => ({
+      label: key,
+      value: key,
+    }));
+
+    return formattedOptions;
+  } catch (error) {
+    console.error('Error fetching prompt options:', error);
+    throw new Error('Failed to fetch prompt options');
+  }
+};

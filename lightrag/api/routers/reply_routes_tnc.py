@@ -101,6 +101,15 @@ class ReplyRequest(BaseModel):
         ...,
         description="Timestamp of the current message."
     )
+    prompt: str = Field(
+        ...,
+        description="Define the prompt."
+    )
+    response_format: str = Field(
+        ...,
+        description="Defines the format of the reply."
+    )
+
     topic: Optional[Literal[
         "Social", "Collab", "Friendship", "Thinking", "English", "Diet", "Fitness",
         "Coping", "Learning", "Financial", "Practical", "Problem-solving", 

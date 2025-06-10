@@ -2,10 +2,10 @@ from typing import Optional
 import os
 from .base_tnc import DialogTurn, CoachMessage, AISuggestion, ReplyParam
 from .prompt import PROMPTS
-from .prompt_coach_reply_tnc import PROMPT_COACH
 from lightrag.utils import always_get_an_event_loop
 from .operate_coach_reply_tnc import format_conversation_history
 from lightrag.lightrag import LightRAG
+from lightrag.api.routers.prompt_routes_tnc import load_prompts 
 import logging
 
 logger = logging.getLogger(__name__)
@@ -26,6 +26,8 @@ class CoachReply:
         try:
             role_user = os.getenv("REPLY_ROLE_USER", "student")
             role_assistant = os.getenv("REPLY_ROLE_ASSISTANT", "school_counselor")
+            # Dynamically load the latest prompts
+            PROMPT_COACH = load_prompts()
 
             if not content:
                 sample_opener = "How has your day been?"
@@ -86,10 +88,16 @@ class CoachReply:
             if not level or ":" not in level:
                 level = "Unknown : Unknown"
             logger.debug(f"Detected Level: {level}")
+            
             # ---- Create Coach Reply ----
-            reply_prompt = PROMPT_COACH[f"{role_assistant}_reply"].format(
+            prompt = param.prompt.lower()
+            response_format =param.response_format.lower()
+            mode = param.mode
+            reply_prompt = PROMPT_COACH[f"{role_assistant}_{prompt}_reply"].format(
                 history=formatted_history,
                 last_message=content,
+                kg_context="",
+                vector_context="",
                 intent=intent,
                 topic=topic,
                 sentiment=sentiment,
