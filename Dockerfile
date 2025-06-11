@@ -55,7 +55,7 @@ ENV PYTHONPATH="/usr/local/lib/python3.10/site-packages"
 
 # Copy application files
 COPY ./lightrag ./lightrag
-COPY lightrag/data/prompt_coach_reply_tnc.py ./lightrag/data/prompt_coach_reply_tnc.py
+# COPY lightrag/data/prompt_coach_reply_tnc.py ./lightrag/data/prompt_coach_reply_tnc.py
 COPY setup.py .
 
 # Install the Python package

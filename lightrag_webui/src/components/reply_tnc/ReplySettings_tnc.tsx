@@ -161,7 +161,7 @@ export default function ReplySettings() {
             />
 
             {/* New Response Format Setting */}
-            <Text className="ml-1" text="Response Format" tooltip="Select the format of the response" side="left" />
+            <Text className="ml-1" text="Response Format" tooltip="Select the format of the AI's response" side="left" />
             <Select
               id="response-format-select"
               value={formattedResponseFormatOptions.find(option => option.value === replySettings.response_format) || formattedResponseFormatOptions[0]}
