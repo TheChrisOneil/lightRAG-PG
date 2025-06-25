@@ -82,6 +82,14 @@ class DialogTurn(BaseModel):
     userMessage: Optional[UserMessage] = None
     coachMessage: Optional[CoachMessage] = None
 
+class StudentProfile(BaseModel):
+    age: Optional[int] = None
+    gender: Optional[str] = None  # e.g., 'male', 'female', 'non-binary', 'other'
+    grade: Optional[str] = None
+    class_enrollment: Optional[List[str]] = None
+    hobbies: Optional[List[str]] = None
+    sports: Optional[List[str]] = None
+
 class ReplyRequest(BaseModel):
     student_name: Optional[str] = Field(
         default=None,
@@ -244,7 +252,8 @@ class ReplyRequest(BaseModel):
     ],
     description="Conversation history including user and coach dialog turns."
     )   
-
+    student_profile: Optional[StudentProfile] = None 
+    
     @field_validator("hl_keywords", mode="after")
     @classmethod
     def hl_keywords_strip_after(cls, hl_keywords: List[str] | None) -> List[str] | None:

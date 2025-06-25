@@ -37,6 +37,9 @@ from .prompt import GRAPH_FIELD_SEP, PROMPTS
 import time
 from dotenv import load_dotenv
 
+#TNC
+from .operate_coach_reply_tnc import custom_handle_single_relationship_extraction
+
 # use the .env that is inside the current folder
 # allows to use different .env file for each lightrag instance
 # the OS environment variables take precedence over the .env file
@@ -277,6 +280,7 @@ async def _merge_edges_then_upsert(
     already_description = []
     already_keywords = []
     already_file_paths = []
+    already_relationship_types = [] # TNC custom field for relationship type
 
     if await knowledge_graph_inst.has_edge(src_id, tgt_id):
         already_edge = await knowledge_graph_inst.get_edge(src_id, tgt_id)
@@ -292,7 +296,12 @@ async def _merge_edges_then_upsert(
                         already_edge["source_id"], [GRAPH_FIELD_SEP]
                     )
                 )
-
+            
+            # TNC start    
+            # Get relationship_type with "UNKNOWN" as the default if missing or None <====== TNC
+            already_relationship_types.append(already_edge.get("relationship_type", "UNKNOWN"))           
+            # TNC stop
+                    
             # Get file_path with empty string default if missing or None
             if already_edge.get("file_path") is not None:
                 already_file_paths.extend(
@@ -314,6 +323,16 @@ async def _merge_edges_then_upsert(
                 )
 
     # Process edges_data with None checks
+    # TNC custom field for relationship type;  Only one relationship_type is allowed
+    relationship_type = sorted(
+        Counter(
+            [dp["relationship_type"] for dp in edges_data if dp.get("relationship_type")]
+            + already_relationship_types
+        ).items(),
+        key=lambda x: x[1],  # Sort by frequency
+        reverse=True,  # Most frequent first
+    )[0][0]  # Select the most frequent relationship_type
+    # TNC custom field for relationship type end
     weight = sum([dp["weight"] for dp in edges_data] + already_weights)
     description = GRAPH_FIELD_SEP.join(
         sorted(
@@ -363,6 +382,7 @@ async def _merge_edges_then_upsert(
         src_id,
         tgt_id,
         edge_data=dict(
+            relationship_type=relationship_type,
             weight=weight,
             description=description,
             keywords=keywords,
@@ -374,6 +394,7 @@ async def _merge_edges_then_upsert(
     edge_data = dict(
         src_id=src_id,
         tgt_id=tgt_id,
+        relationship_type=relationship_type,
         description=description,
         keywords=keywords,
         source_id=source_id,
@@ -532,10 +553,16 @@ async def extract_entities(
             if if_entities is not None:
                 maybe_nodes[if_entities["entity_name"]].append(if_entities)
                 continue
-            
-            if_relation = await _handle_single_relationship_extraction(
+            # TNC custom handler for relationships    
+            # if_relation = await _handle_single_relationship_extraction(
+            #     record_attributes, chunk_key, file_path
+            # )
+            #TNC custom handler for relationships
+            if_relation = await custom_handle_single_relationship_extraction( 
                 record_attributes, chunk_key, file_path
             )
+            logger.debug(f"Extracted relationship: {if_relation}")
+            #TNC custom handler for relationships end
             if if_relation is not None:
                 maybe_edges[(if_relation["src_id"], if_relation["tgt_id"])].append(
                     if_relation
@@ -655,7 +682,7 @@ async def extract_entities(
                         "src_id": dp["src_id"],
                         "tgt_id": dp["tgt_id"],
                         "keywords": dp["keywords"],
-                        "content": f"{dp['src_id']}\t{dp['tgt_id']}\n{dp['keywords']}\n{dp['description']}",
+                        "content": f"{dp['src_id']}\t{dp['tgt_id']}\n{dp['relationship_type']}\n{dp['keywords']}\n{dp['description']}",
                         "source_id": dp["source_id"],
                         "file_path": dp.get("file_path", "unknown_source"),
                     }
@@ -948,6 +975,7 @@ async def mix_kg_vector_query(
     2. Retrieving relevant text chunks through vector similarity
     3. Combining both results for comprehensive answer generation
     """
+    logger.debug("mix_kg_vector_query: starting")
     # 1. Cache handling
     use_model_func = (
         query_param.model_func
@@ -974,7 +1002,8 @@ async def mix_kg_vector_query(
             hl_keywords, ll_keywords = await get_keywords_from_query(
                 query, query_param, global_config, hashing_kv
             )
-
+            logger.debug(f"High-level keywords: {hl_keywords}")
+            logger.debug(f"Low-level  keywords: {ll_keywords}")
             if not hl_keywords and not ll_keywords:
                 logger.warning("Both high-level and low-level keywords are empty")
                 return None
@@ -1011,14 +1040,16 @@ async def mix_kg_vector_query(
             return None
 
     async def get_vector_context():
+        logger.debug("Vector Context Search: starting")
         # Consider conversation history in vector search
         augmented_query = query
         if history_context:
             augmented_query = f"{history_context}\n{query}"
-
+        logger.debug("Vector Context Search: augmented_query: %s", augmented_query)
         try:
             # Reduce top_k for vector search in hybrid mode since we have structured information from KG
             mix_topk = min(10, query_param.top_k)
+           
             results = await chunks_vdb.query(
                 augmented_query, top_k=mix_topk, ids=query_param.ids
             )
@@ -1070,7 +1101,8 @@ async def mix_kg_vector_query(
     kg_context, vector_context = await asyncio.gather(
         get_kg_context(), get_vector_context()
     )
-
+    # logger.debug(f"Knowledge Graph Context: {kg_context} \n\n")
+    # logger.debug(f"Vector Context: {vector_context}")
     # 4. Merge contexts
     if kg_context is None and vector_context is None:
         return PROMPTS["fail_response"]
@@ -1180,7 +1212,9 @@ async def _build_query_context(
                 query_param,
             ),
         )
-
+        logger.debug(
+            f"Hybrid query: ll_data: {ll_data}, hl_data: {hl_data}, query_param: {query_param}"
+        )
         (
             ll_entities_context,
             ll_relations_context,
@@ -1317,6 +1351,7 @@ async def _get_node_data(
             "id",
             "source",
             "target",
+            "relationship_type", #<=============== TNC relationship type
             "description",
             "keywords",
             "weight",
@@ -1339,6 +1374,7 @@ async def _get_node_data(
                 i,
                 e["src_tgt"][0],
                 e["src_tgt"][1],
+                e["relationship_type"],  # TNC custom relationship type
                 e["description"],
                 e["keywords"],
                 e["weight"],
@@ -2084,6 +2120,8 @@ async def query_with_keywords(
             hashing_kv=hashing_kv,
         )
     elif param.mode == "mix":
+        logger.debug(f"Mix mode: formatted_question: {formatted_question}")
+                     
         return await mix_kg_vector_query(
             formatted_question,
             knowledge_graph_inst,

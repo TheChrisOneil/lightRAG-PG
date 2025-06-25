@@ -54,7 +54,10 @@ const promptOptions = [
   'Default'
 ];
 
-const formattedQueryModeOptions = queryModeOptions.map(option => ({ label: option.trim(), value: option.trim() }));
+const formattedQueryModeOptions = queryModeOptions.map(option => ({
+  label: option.charAt(0).toUpperCase() + option.slice(1), // Display with leading uppercase
+  value: option // Value stays lowercase
+}));
 const formattedResponseFormatOptions = responseFormatOptions.map(option => ({ label: option.trim(), value: option.trim() }));
 let formattedPromptOptions = promptOptions.map(option => ({ label: option.trim(), value: option.trim() }));
 const formattedTopicOptions = topicOptions.map(option => ({ label: option.trim(), value: option.trim() }));

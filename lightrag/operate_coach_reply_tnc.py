@@ -1,4 +1,10 @@
 from typing import List, Dict, Any
+from .utils import (
+    clean_str,
+    is_float_regex,
+    logger
+)
+
 
 def format_conversation_history(conversation_history: List[Dict[str, Any]]) -> str:
     """_summary_
@@ -91,3 +97,39 @@ def find_missing_keys_in_history(conversation_history: List[Dict[str, Any]]) -> 
                         )
 
     return missing_keys_report
+
+async def custom_handle_single_relationship_extraction(
+    record_attributes: list[str],
+    chunk_key: str,
+    file_path: str = "unknown_source",
+):
+    """
+    Custom handler for extracting relationships with additional properties:
+    relationship_type.
+    """
+    logger.debug(f"Processing relationship record attributes: {record_attributes}")
+    if len(record_attributes) < 6 or record_attributes[0] != '"relationship"':
+        return None
+    # add this record as edge
+    source = clean_str(record_attributes[1]).strip('"')
+    target = clean_str(record_attributes[2]).strip('"')
+    relationship_type = clean_str(record_attributes[3]).strip('"')
+    edge_description = clean_str(record_attributes[4]).strip('"')
+    edge_keywords = clean_str(record_attributes[5]).strip('"')
+    edge_source_id = chunk_key
+    weight = (
+        float(record_attributes[-1].strip('"'))
+        if is_float_regex(record_attributes[-1])
+        else 1.0
+    )
+    return dict(
+        src_id=source,
+        tgt_id=target,
+        relationship_type=relationship_type,
+        weight=weight,
+        description=edge_description,
+        keywords=edge_keywords,
+        source_id=edge_source_id,
+        file_path=file_path,
+    )
+    

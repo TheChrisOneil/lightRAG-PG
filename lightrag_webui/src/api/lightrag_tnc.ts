@@ -1,3 +1,4 @@
+
 /**
  * ┌─────────────────────────────────────────────┐
  * │ TechNexusClarity Custom Module              │
@@ -33,33 +34,46 @@ type AISuggestion = {
     confidence?: number
   }
   
+// Define the StudentProfile type
+export type StudentProfile = {
+  name?: string; // first name or nickname
+  age?: number; // Optional age
+  gender?: 'male' | 'female' | 'non-binary' | 'other'; // Optional gender with predefined values
+  grade?: string; // Optional grade (e.g., "10th Grade")
+  class_enrollment?: string[]; // Optional list of enrolled classes
+  hobbies?: string[]; // Optional list of hobbies
+  sports?: string[]; // Optional list of sports
+};
+
+// Update the ReplyRequest type to include the student_profile
 export type ReplyRequest = {
-    student_name?: string
-    speaker: 'student' | 'patient'
-    content: string
-    timestamp: string
-    response_format: string
-    prompt: string
-    topic?: string
-    sub_topic?: string
-    intent?: string
-    sentiment?: string
-    technique?: string
-    level?: string
-    mode: QueryMode
-    only_need_context?: boolean
-    only_need_prompt?: boolean
-    top_k?: number
-    max_token_for_text_unit?: number
-    max_token_for_global_context?: number
-    max_token_for_local_context?: number
-    hl_keywords?: string[]
-    ll_keywords?: string[]
-    history_turns?: number
-    conversation_history?: DialogTurn[]
-      /** Namespace for the query. */
-  namespace?: string
-  }
+  student_name?: string;
+  speaker: 'student' | 'patient';
+  content: string;
+  timestamp: string;
+  response_format: string;
+  prompt: string;
+  topic?: string;
+  sub_topic?: string;
+  intent?: string;
+  sentiment?: string;
+  technique?: string;
+  level?: string;
+  mode: QueryMode;
+  only_need_context?: boolean;
+  only_need_prompt?: boolean;
+  top_k?: number;
+  max_token_for_text_unit?: number;
+  max_token_for_global_context?: number;
+  max_token_for_local_context?: number;
+  hl_keywords?: string[];
+  ll_keywords?: string[];
+  history_turns?: number;
+  conversation_history?: DialogTurn[];
+  /** Namespace for the query. */
+  namespace?: string;
+  student_profile?: StudentProfile; // Optional student profile
+}
   
 export type ReplyResponse = {
     coachMessage?: CoachMessage

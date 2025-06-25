@@ -453,7 +453,7 @@ def create_app(args):
         workspace=workspace, # TNC addition 
         auto_manage_storages_states=False,
         max_parallel_insert=args.max_parallel_insert,
-        addon_params={"language": args.summary_language},        
+        addon_params={"language": args.summary_language, "example_number": 1},      
     )
     
     # Async version includes initialization and eviction logic

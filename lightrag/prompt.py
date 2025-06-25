@@ -10,40 +10,114 @@ PROMPTS["DEFAULT_TUPLE_DELIMITER"] = "<|>"
 PROMPTS["DEFAULT_RECORD_DELIMITER"] = "##"
 PROMPTS["DEFAULT_COMPLETION_DELIMITER"] = "<|COMPLETE|>"
 
-PROMPTS["DEFAULT_ENTITY_TYPES"] = ["organization", "person", "geo", "event", "category"]
+PROMPTS["DEFAULT_ENTITY_TYPES"] = [   "identity_entity", "academic_entity", "emotional_entity", 
+            "physical_entity", "cognitive_entity", "social_entity",
+            "family_system_entity", "community_entity", "risk_awareness_entity", "crisis_intervention_protocol"
+            "life_skills_entity", "transformation_domain", "development_relationship",
+            "student", "development_mentor"]
 
 PROMPTS["entity_extraction"] = """---Goal---
-Given a text document that is potentially relevant to this activity and a list of entity types, identify all entities of those types from the text and all relationships among the identified entities.
+Given a text document about high school student development and a list of entity types from the High School Student Development Ontology (HSSDO), identify all entities of those types from the text and all relationships among the identified entities.
 Use {language} as output language.
+---HSSDO Entity Type Guidelines---
+When identifying entities, ensure they align with the HSSDO ontological framework:
+identity_entity: Self-concept, values clarification, cultural identity, personal vision, authentic expression, identity integration
 
+Examples: Personal Vision Development, Values Clarification, Self Awareness, Cultural Identity Exploration, Authentic Expression
+
+academic_entity: Educational performance, learning strategies, intellectual growth, study skills, college readiness
+
+Examples: Academic Performance, Study Skills, Intellectual Curiosity, Critical Thinking, College Readiness, Learning Optimization
+
+emotional_entity: Emotional intelligence, self-regulation, social awareness, relationship management, stress resilience
+
+Examples: Self Regulation, Empathy Development, Social Awareness, Emotional Coping, Anxiety Management, Mood Management
+
+physical_entity: Physical health, fitness, energy management, body awareness, health habits
+
+Examples: Physical Fitness, Health Habits, Energy Management, Body Awareness, Sleep Hygiene, Nutritional Wellness
+
+cognitive_entity: Mental processes, thinking patterns, executive function, attention control, memory, creative thinking
+
+Examples: Executive Function, Attention Control, Memory Capacity, Creative Thinking, Problem Solving, Time Management
+
+social_entity: Interpersonal relationships, communication skills, community engagement, peer relationships, social presence
+
+Examples: Communication Skills, Peer Relationships, Community Engagement, Social Presence, Conflict Resolution, Team Building
+
+family_system_entity: Family dynamics, parental engagement, cultural influences, socioeconomic factors
+
+Examples: Parent Guardian Engagement, Cultural Influences, Family Dynamics, Socioeconomic Factors, Family Communication Patterns
+
+community_entity: Community context, school environment, neighborhood factors, community resources
+
+Examples: School Environment, Community Resources, Neighborhood Factors, Peer Culture, Extracurricular Opportunities
+
+risk_awareness_entity: Risk management, substance awareness, digital safety, crisis prevention
+
+Examples: Substance Awareness, Digital Safety, Sexual Health Education, Cyberbullying Prevention
+
+life_skills_entity: Practical skills, financial literacy, career development, independent living preparation
+
+Examples: Financial Literacy, Career Development, Money Management, Work Readiness, Consumer Skills
+
+---HSSDO Relationship Types---
+Use these relationship types that reflect how student development entities influence each other:
+ENHANCES (0.5-0.9): Improves or amplifies another entity
+SUPPORTS (0.4-0.8): Provides foundation for another entity
+ENABLES (0.6-0.9): Makes another entity possible or easier
+CAUSES (0.7-1.0): Direct causation between entities
+INFLUENCES (0.5-0.8): Affects development of another entity
+INHIBITS (0.5-0.9): Suppresses or reduces another entity
+COMPETES (0.4-0.7): Creates competition for resources
+UNDERMINES (0.5-0.8): Weakens foundation of another entity
+SYNERGIZES (0.7-1.0): Combined effect greater than sum of parts
+CONSTRAINS (0.4-0.8): External factor that limits development
+FACILITATES (0.5-0.9): External factor that makes development easier
 ---Steps---
-1. Identify all entities. For each identified entity, extract the following information:
-- entity_name: Name of the entity, use same language as input text. If English, capitalized the name.
-- entity_type: One of the following types: [{entity_types}]
-- entity_description: Comprehensive description of the entity's attributes and activities
+
+Identify all entities. For each identified entity, extract the following information:
+
+
+entity_name: Name of the entity that aligns with HSSDO subclasses (e.g., "Values Clarification" not "career goals"). Use same language as input text. If English, capitalize first letter of each word.
+entity_type: One of the HSSDO entity types: [{entity_types}]
+entity_description: Comprehensive description of the entity's attributes and activities as they relate to student development
 Format each entity as ("entity"{tuple_delimiter}<entity_name>{tuple_delimiter}<entity_type>{tuple_delimiter}<entity_description>)
 
-2. From the entities identified in step 1, identify all pairs of (source_entity, target_entity) that are *clearly related* to each other.
+
+From the entities identified in step 1, identify all pairs of (source_entity, target_entity) that are clearly related to each other according to student development principles.
 For each pair of related entities, extract the following information:
-- source_entity: name of the source entity, as identified in step 1
-- target_entity: name of the target entity, as identified in step 1
-- relationship_description: explanation as to why you think the source entity and the target entity are related to each other
-- relationship_strength: a numeric score indicating strength of the relationship between the source entity and target entity
-- relationship_keywords: one or more high-level key words that summarize the overarching nature of the relationship, focusing on concepts or themes rather than specific details
-Format each relationship as ("relationship"{tuple_delimiter}<source_entity>{tuple_delimiter}<target_entity>{tuple_delimiter}<relationship_description>{tuple_delimiter}<relationship_keywords>{tuple_delimiter}<relationship_strength>)
 
-3. Identify high-level key words that summarize the main concepts, themes, or topics of the entire text. These should capture the overarching ideas present in the document.
-Format the content-level key words as ("content_keywords"{tuple_delimiter}<high_level_keywords>)
 
-4. Return output in {language} as a single list of all the entities and relationships identified in steps 1 and 2. Use **{record_delimiter}** as the list delimiter.
+source_entity: name of the source entity, as identified in step 1
+target_entity: name of the target entity, as identified in step 1
+relationship_type: one of the HSSDO relationship types listed above
+relationship_description: explanation of how the source entity influences the target entity in student development context
+relationship_keywords: high-level keywords summarizing the developmental relationship
+relationship_strength: numeric score (0.0-1.0) indicating relationship strength within the specified range for the relationship type
+Format each relationship as ("relationship"{tuple_delimiter}<source_entity>{tuple_delimiter}<target_entity>{tuple_delimiter}<relationship_type>{tuple_delimiter}<relationship_description>{tuple_delimiter}<relationship_keywords>{tuple_delimiter}<relationship_strength>)
 
-5. When finished, output {completion_delimiter}
 
+Identify high-level keywords that summarize the main student development concepts, themes, or topics of the entire text. Focus on developmental domains and growth areas.
+Format the content-level keywords as ("content_keywords"{tuple_delimiter}<high_level_keywords>)
+Return output in {language} as a single list of all the entities and relationships identified in steps 1 and 2. Use {record_delimiter} as the list delimiter.
+When finished, output {completion_delimiter}
+
+---Quality Checks---
+Before finalizing output, verify:
+
+All entity names align with HSSDO ontological subclasses
+All relationship types are from the approved HSSDO list
+Relationship strengths fall within specified ranges
+Entities represent actual student development phenomena from the text
+Relationships reflect authentic developmental connections
+DO NOT include an entity in the relationships if it was not identified in step 1
+DO NOT include relationships that do not have a source and target entity not identified from step 1
+DO NOT include relationships that do not have a relationship type from the HSSDO list
 ######################
 ---Examples---
 ######################
 {examples}
-
 #############################
 ---Real Data---
 ######################
@@ -54,81 +128,75 @@ Text:
 Output:"""
 
 PROMPTS["entity_extraction_examples"] = [
-    """Example 1:
+    """Example 1 - Counselor Session:
+Entity_types: [identity_entity, academic_entity, emotional_entity, physical_entity, social_entity, family_system_entity]
 
-Entity_types: [person, technology, mission, organization, location]
 Text:
 ```
-while Alex clenched his jaw, the buzz of frustration dull against the backdrop of Taylor's authoritarian certainty. It was this competitive undercurrent that kept him alert, the sense that his and Jordan's shared commitment to discovery was an unspoken rebellion against Cruz's narrowing vision of control and order.
-
-Then Taylor did something unexpected. They paused beside Jordan and, for a moment, observed the device with something akin to reverence. "If this tech can be understood..." Taylor said, their voice quieter, "It could change the game for us. For all of us."
-
-The underlying dismissal earlier seemed to falter, replaced by a glimpse of reluctant respect for the gravity of what lay in their hands. Jordan looked up, and for a fleeting heartbeat, their eyes locked with Taylor's, a wordless clash of wills softening into an uneasy truce.
-
-It was a small transformation, barely perceptible, but one that Alex noted with an inward nod. They had all been brought here by different paths
+Sarah (Grade 11) has been struggling with anxiety about college applications. She stays up until 2 AM working on essays and studying for SATs, which makes her exhausted in class. Her parents keep asking about her progress, adding pressure. She's been avoiding her friends because she doesn't have time for social activities. When I asked about her confidence, she said "I don't think I'm smart enough for the colleges my parents want me to attend."
 ```
 
 Output:
-("entity"{tuple_delimiter}"Alex"{tuple_delimiter}"person"{tuple_delimiter}"Alex is a character who experiences frustration and is observant of the dynamics among other characters."){record_delimiter}
-("entity"{tuple_delimiter}"Taylor"{tuple_delimiter}"person"{tuple_delimiter}"Taylor is portrayed with authoritarian certainty and shows a moment of reverence towards a device, indicating a change in perspective."){record_delimiter}
-("entity"{tuple_delimiter}"Jordan"{tuple_delimiter}"person"{tuple_delimiter}"Jordan shares a commitment to discovery and has a significant interaction with Taylor regarding a device."){record_delimiter}
-("entity"{tuple_delimiter}"Cruz"{tuple_delimiter}"person"{tuple_delimiter}"Cruz is associated with a vision of control and order, influencing the dynamics among other characters."){record_delimiter}
-("entity"{tuple_delimiter}"The Device"{tuple_delimiter}"technology"{tuple_delimiter}"The Device is central to the story, with potential game-changing implications, and is revered by Taylor."){record_delimiter}
-("relationship"{tuple_delimiter}"Alex"{tuple_delimiter}"Taylor"{tuple_delimiter}"Alex is affected by Taylor's authoritarian certainty and observes changes in Taylor's attitude towards the device."{tuple_delimiter}"power dynamics, perspective shift"{tuple_delimiter}7){record_delimiter}
-("relationship"{tuple_delimiter}"Alex"{tuple_delimiter}"Jordan"{tuple_delimiter}"Alex and Jordan share a commitment to discovery, which contrasts with Cruz's vision."{tuple_delimiter}"shared goals, rebellion"{tuple_delimiter}6){record_delimiter}
-("relationship"{tuple_delimiter}"Taylor"{tuple_delimiter}"Jordan"{tuple_delimiter}"Taylor and Jordan interact directly regarding the device, leading to a moment of mutual respect and an uneasy truce."{tuple_delimiter}"conflict resolution, mutual respect"{tuple_delimiter}8){record_delimiter}
-("relationship"{tuple_delimiter}"Jordan"{tuple_delimiter}"Cruz"{tuple_delimiter}"Jordan's commitment to discovery is in rebellion against Cruz's vision of control and order."{tuple_delimiter}"ideological conflict, rebellion"{tuple_delimiter}5){record_delimiter}
-("relationship"{tuple_delimiter}"Taylor"{tuple_delimiter}"The Device"{tuple_delimiter}"Taylor shows reverence towards the device, indicating its importance and potential impact."{tuple_delimiter}"reverence, technological significance"{tuple_delimiter}9){record_delimiter}
-("content_keywords"{tuple_delimiter}"power dynamics, ideological conflict, discovery, rebellion"){completion_delimiter}
+("entity"{tuple_delimiter}"Academic Stress"{tuple_delimiter}"academic_entity"{tuple_delimiter}"High anxiety about college applications and SAT performance affecting daily functioning"){record_delimiter}
+("entity"{tuple_delimiter}"Sleep Deprivation"{tuple_delimiter}"physical_entity"{tuple_delimiter}"Staying up until 2 AM for studying, resulting in classroom exhaustion"){record_delimiter}
+("entity"{tuple_delimiter}"Parental Pressure"{tuple_delimiter}"family_system_entity"{tuple_delimiter}"Parents continuously asking about college progress, creating additional stress"){record_delimiter}
+("entity"{tuple_delimiter}"Social Isolation"{tuple_delimiter}"social_entity"{tuple_delimiter}"Avoiding friends due to time constraints from academic pressure"){record_delimiter}
+("entity"{tuple_delimiter}"Self Efficacy"{tuple_delimiter}"identity_entity"{tuple_delimiter}"Low confidence in academic abilities and college readiness"){record_delimiter}
+("entity"{tuple_delimiter}"Anxiety Management"{tuple_delimiter}"emotional_entity"{tuple_delimiter}"Struggling to manage college-related anxiety affecting multiple life areas"){record_delimiter}
+("relationship"{tuple_delimiter}"Parental Pressure"{tuple_delimiter}"Academic Stress"{tuple_delimiter}"ENHANCES"{tuple_delimiter}"Parental questioning about college progress directly increases Sarah's academic anxiety"{tuple_delimiter}"family pressure, academic anxiety"{tuple_delimiter}0.8){record_delimiter}
+("relationship"{tuple_delimiter}"Academic Stress"{tuple_delimiter}"Sleep Deprivation"{tuple_delimiter}"CAUSES"{tuple_delimiter}"High academic anxiety leads to staying up late studying and poor sleep quality"{tuple_delimiter}"stress response, sleep disruption"{tuple_delimiter}0.7){record_delimiter}
+("relationship"{tuple_delimiter}"Sleep Deprivation"{tuple_delimiter}"Academic Stress"{tuple_delimiter}"UNDERMINES"{tuple_delimiter}"Poor sleep makes it difficult to manage academic stress and maintain focus"{tuple_delimiter}"fatigue, stress amplification"{tuple_delimiter}0.6){record_delimiter}
+("relationship"{tuple_delimiter}"Academic Stress"{tuple_delimiter}"Social Isolation"{tuple_delimiter}"CAUSES"{tuple_delimiter}"Time spent on college prep reducing availability for friend relationships"{tuple_delimiter}"time competition, social withdrawal"{tuple_delimiter}0.5){record_delimiter}
+("relationship"{tuple_delimiter}"Parental Pressure"{tuple_delimiter}"Self Efficacy"{tuple_delimiter}"UNDERMINES"{tuple_delimiter}"External pressure undermining Sarah's confidence in her own abilities"{tuple_delimiter}"pressure, self-doubt"{tuple_delimiter}0.7){record_delimiter}
+("relationship"{tuple_delimiter}"Sleep Deprivation"{tuple_delimiter}"Anxiety Management"{tuple_delimiter}"CONSTRAINS"{tuple_delimiter}"Fatigue making it harder to cope with and manage college-related anxiety"{tuple_delimiter}"physical exhaustion, emotional regulation"{tuple_delimiter}0.6){record_delimiter}
+("content_keywords"{tuple_delimiter}"college preparation stress, sleep disruption, parental pressure, social isolation, academic anxiety, self-confidence issues"){completion_delimiter}
 #############################""",
-    """Example 2:
+    """Example 2 - Teacher Observation:
 
-Entity_types: [company, index, commodity, market_trend, economic_policy, biological]
+Entity_types: [cognitive_entity, social_entity, academic_entity, physical_entity]
+
 Text:
 ```
-Stock markets faced a sharp downturn today as tech giants saw significant declines, with the Global Tech Index dropping by 3.4% in midday trading. Analysts attribute the selloff to investor concerns over rising interest rates and regulatory uncertainty.
-
-Among the hardest hit, Nexon Technologies saw its stock plummet by 7.8% after reporting lower-than-expected quarterly earnings. In contrast, Omega Energy posted a modest 2.1% gain, driven by rising oil prices.
-
-Meanwhile, commodity markets reflected a mixed sentiment. Gold futures rose by 1.5%, reaching $2,080 per ounce, as investors sought safe-haven assets. Crude oil prices continued their rally, climbing to $87.60 per barrel, supported by supply constraints and strong demand.
-
-Financial experts are closely watching the Federal Reserve's next move, as speculation grows over potential rate hikes. The upcoming policy announcement is expected to influence investor confidence and overall market stability.
+Marcus (Grade 10) has shown dramatic improvement since joining the debate team. His focus in class has improved, he's asking thoughtful questions, and his grades went from C's to B's. He seems more confident and has been helping other students. However, he mentioned being tired because debate practice runs late and he's been drinking energy drinks to stay alert.
 ```
 
 Output:
-("entity"{tuple_delimiter}"Global Tech Index"{tuple_delimiter}"index"{tuple_delimiter}"The Global Tech Index tracks the performance of major technology stocks and experienced a 3.4% decline today."){record_delimiter}
-("entity"{tuple_delimiter}"Nexon Technologies"{tuple_delimiter}"company"{tuple_delimiter}"Nexon Technologies is a tech company that saw its stock decline by 7.8% after disappointing earnings."){record_delimiter}
-("entity"{tuple_delimiter}"Omega Energy"{tuple_delimiter}"company"{tuple_delimiter}"Omega Energy is an energy company that gained 2.1% in stock value due to rising oil prices."){record_delimiter}
-("entity"{tuple_delimiter}"Gold Futures"{tuple_delimiter}"commodity"{tuple_delimiter}"Gold futures rose by 1.5%, indicating increased investor interest in safe-haven assets."){record_delimiter}
-("entity"{tuple_delimiter}"Crude Oil"{tuple_delimiter}"commodity"{tuple_delimiter}"Crude oil prices rose to $87.60 per barrel due to supply constraints and strong demand."){record_delimiter}
-("entity"{tuple_delimiter}"Market Selloff"{tuple_delimiter}"market_trend"{tuple_delimiter}"Market selloff refers to the significant decline in stock values due to investor concerns over interest rates and regulations."){record_delimiter}
-("entity"{tuple_delimiter}"Federal Reserve Policy Announcement"{tuple_delimiter}"economic_policy"{tuple_delimiter}"The Federal Reserve's upcoming policy announcement is expected to impact investor confidence and market stability."){record_delimiter}
-("relationship"{tuple_delimiter}"Global Tech Index"{tuple_delimiter}"Market Selloff"{tuple_delimiter}"The decline in the Global Tech Index is part of the broader market selloff driven by investor concerns."{tuple_delimiter}"market performance, investor sentiment"{tuple_delimiter}9){record_delimiter}
-("relationship"{tuple_delimiter}"Nexon Technologies"{tuple_delimiter}"Global Tech Index"{tuple_delimiter}"Nexon Technologies' stock decline contributed to the overall drop in the Global Tech Index."{tuple_delimiter}"company impact, index movement"{tuple_delimiter}8){record_delimiter}
-("relationship"{tuple_delimiter}"Gold Futures"{tuple_delimiter}"Market Selloff"{tuple_delimiter}"Gold prices rose as investors sought safe-haven assets during the market selloff."{tuple_delimiter}"market reaction, safe-haven investment"{tuple_delimiter}10){record_delimiter}
-("relationship"{tuple_delimiter}"Federal Reserve Policy Announcement"{tuple_delimiter}"Market Selloff"{tuple_delimiter}"Speculation over Federal Reserve policy changes contributed to market volatility and investor selloff."{tuple_delimiter}"interest rate impact, financial regulation"{tuple_delimiter}7){record_delimiter}
-("content_keywords"{tuple_delimiter}"market downturn, investor sentiment, commodities, Federal Reserve, stock performance"){completion_delimiter}
+("entity"{tuple_delimiter}"Academic Improvement"{tuple_delimiter}"academic_entity"{tuple_delimiter}"Grades improved from C's to B's showing measurable academic progress"){record_delimiter}
+("entity"{tuple_delimiter}"Classroom Focus"{tuple_delimiter}"cognitive_entity"{tuple_delimiter}"Improved concentration and thoughtful question-asking in class"){record_delimiter}
+("entity"{tuple_delimiter}"Social Confidence"{tuple_delimiter}"social_entity"{tuple_delimiter}"Increased confidence and peer helping behaviors"){record_delimiter}
+("entity"{tuple_delimiter}"Extracurricular Engagement"{tuple_delimiter}"academic_entity"{tuple_delimiter}"Active participation in debate team providing structure and growth"){record_delimiter}
+("entity"{tuple_delimiter}"Energy Management"{tuple_delimiter}"physical_entity"{tuple_delimiter}"Fatigue from late practices, using energy drinks for alertness"){record_delimiter}
+("relationship"{tuple_delimiter}"Extracurricular Engagement"{tuple_delimiter}"Social Confidence"{tuple_delimiter}"ENHANCES"{tuple_delimiter}"Debate team participation building Marcus's confidence and social skills"{tuple_delimiter}"skill building, confidence growth"{tuple_delimiter}0.8){record_delimiter}
+("relationship"{tuple_delimiter}"Social Confidence"{tuple_delimiter}"Academic Improvement"{tuple_delimiter}"ENABLES"{tuple_delimiter}"Increased confidence leading to better classroom engagement and grades"{tuple_delimiter}"confidence, academic engagement"{tuple_delimiter}0.7){record_delimiter}
+("relationship"{tuple_delimiter}"Extracurricular Engagement"{tuple_delimiter}"Energy Management"{tuple_delimiter}"UNDERMINES"{tuple_delimiter}"Late debate practices causing fatigue and reliance on stimulants"{tuple_delimiter}"schedule conflict, energy depletion"{tuple_delimiter}0.6){record_delimiter}
+("relationship"{tuple_delimiter}"Classroom Focus"{tuple_delimiter}"Academic Improvement"{tuple_delimiter}"ENABLES"{tuple_delimiter}"Improved concentration and thoughtful questioning directly supporting better academic performance"{tuple_delimiter}"focus, academic success"{tuple_delimiter}0.8){record_delimiter}
+("relationship"{tuple_delimiter}"Extracurricular Engagement"{tuple_delimiter}"Classroom Focus"{tuple_delimiter}"ENHANCES"{tuple_delimiter}"Debate skills and structured thinking transferring to improved classroom engagement"{tuple_delimiter}"skill transfer, cognitive development"{tuple_delimiter}0.7){record_delimiter}
+("relationship"{tuple_delimiter}"Energy Management"{tuple_delimiter}"Classroom Focus"{tuple_delimiter}"CONSTRAINS"{tuple_delimiter}"Fatigue and stimulant dependence potentially limiting sustained concentration ability"{tuple_delimiter}"energy depletion, focus limitation"{tuple_delimiter}0.5){record_delimiter}
+("content_keywords"{tuple_delimiter}"debate team benefits, academic improvement, social confidence, energy management challenges"){completion_delimiter}
 #############################""",
     """Example 3:
 
-Entity_types: [economic_policy, athlete, event, location, record, organization, equipment]
+Entity_types: [cognitive_entity, social_entity, academic_entity, physical_entity, emotional_entity, identity_entity, family_system_entity]
 Text:
 ```
-At the World Athletics Championship in Tokyo, Noah Carter broke the 100m sprint record using cutting-edge carbon-fiber spikes.
+Sarah (Grade 11) told her counselor about her family's recent trip to Costa Rica where they did eco-tours and volunteering. She said it made her realize she wants to study environmental science and maybe work for the Peace Corps someday. She's been researching colleges with strong environmental programs and feels more motivated about her future, though she's worried about the competitive admission requirements.
 ```
 
 Output:
-("entity"{tuple_delimiter}"World Athletics Championship"{tuple_delimiter}"event"{tuple_delimiter}"The World Athletics Championship is a global sports competition featuring top athletes in track and field."){record_delimiter}
-("entity"{tuple_delimiter}"Tokyo"{tuple_delimiter}"location"{tuple_delimiter}"Tokyo is the host city of the World Athletics Championship."){record_delimiter}
-("entity"{tuple_delimiter}"Noah Carter"{tuple_delimiter}"athlete"{tuple_delimiter}"Noah Carter is a sprinter who set a new record in the 100m sprint at the World Athletics Championship."){record_delimiter}
-("entity"{tuple_delimiter}"100m Sprint Record"{tuple_delimiter}"record"{tuple_delimiter}"The 100m sprint record is a benchmark in athletics, recently broken by Noah Carter."){record_delimiter}
-("entity"{tuple_delimiter}"Carbon-Fiber Spikes"{tuple_delimiter}"equipment"{tuple_delimiter}"Carbon-fiber spikes are advanced sprinting shoes that provide enhanced speed and traction."){record_delimiter}
-("entity"{tuple_delimiter}"World Athletics Federation"{tuple_delimiter}"organization"{tuple_delimiter}"The World Athletics Federation is the governing body overseeing the World Athletics Championship and record validations."){record_delimiter}
-("relationship"{tuple_delimiter}"World Athletics Championship"{tuple_delimiter}"Tokyo"{tuple_delimiter}"The World Athletics Championship is being hosted in Tokyo."{tuple_delimiter}"event location, international competition"{tuple_delimiter}8){record_delimiter}
-("relationship"{tuple_delimiter}"Noah Carter"{tuple_delimiter}"100m Sprint Record"{tuple_delimiter}"Noah Carter set a new 100m sprint record at the championship."{tuple_delimiter}"athlete achievement, record-breaking"{tuple_delimiter}10){record_delimiter}
-("relationship"{tuple_delimiter}"Noah Carter"{tuple_delimiter}"Carbon-Fiber Spikes"{tuple_delimiter}"Noah Carter used carbon-fiber spikes to enhance performance during the race."{tuple_delimiter}"athletic equipment, performance boost"{tuple_delimiter}7){record_delimiter}
-("relationship"{tuple_delimiter}"World Athletics Federation"{tuple_delimiter}"100m Sprint Record"{tuple_delimiter}"The World Athletics Federation is responsible for validating and recognizing new sprint records."{tuple_delimiter}"sports regulation, record certification"{tuple_delimiter}9){record_delimiter}
-("content_keywords"{tuple_delimiter}"athletics, sprinting, record-breaking, sports technology, competition"){completion_delimiter}
+("entity"{tuple_delimiter}"Cultural Values Transmission"{tuple_delimiter}"family_system_entity"{tuple_delimiter}"Family transmitting environmental and service values through shared Costa Rica eco-tour and volunteering experience"){record_delimiter}
+("entity"{tuple_delimiter}"Personal Vision Development"{tuple_delimiter}"identity_entity"{tuple_delimiter}"Clear realization about wanting to study environmental science and work for Peace Corps representing future self-concept"){record_delimiter}
+("entity"{tuple_delimiter}"Academic Engagement"{tuple_delimiter}"academic_entity"{tuple_delimiter}"Active research into colleges with strong environmental programs showing increased learning motivation"){record_delimiter}
+("entity"{tuple_delimiter}"Future Orientation"{tuple_delimiter}"emotional_entity"{tuple_delimiter}"Enhanced feelings of excitement and purpose about personal and career goals"){record_delimiter}
+("entity"{tuple_delimiter}"Academic Stress Management"{tuple_delimiter}"emotional_entity"{tuple_delimiter}"Worry and stress about competitive college admission requirements and performance pressure"){record_delimiter}
+("entity"{tuple_delimiter}"Values Clarification"{tuple_delimiter}"identity_entity"{tuple_delimiter}"Environmental values and service orientation becoming clear through meaningful family experience"){record_delimiter}
+("entity"{tuple_delimiter}"Executive Function"{tuple_delimiter}"cognitive_entity"{tuple_delimiter}"Strategic planning and organization behaviors toward college applications and program selection"){record_delimiter}
+("relationship"{tuple_delimiter}"Cultural Values Transmission"{tuple_delimiter}"Values Clarification"{tuple_delimiter}"CAUSES"{tuple_delimiter}"Family cultural experience directly causing environmental values clarification and service orientation"{tuple_delimiter}"family influence, value development"{tuple_delimiter}0.9){record_delimiter}
+("relationship"{tuple_delimiter}"Values Clarification"{tuple_delimiter}"Personal Vision Development"{tuple_delimiter}"ENABLES"{tuple_delimiter}"Clarified values enabling clear personal vision and career path realization"{tuple_delimiter}"values alignment, identity coherence"{tuple_delimiter}0.8){record_delimiter}
+("relationship"{tuple_delimiter}"Personal Vision Development"{tuple_delimiter}"Academic Engagement"{tuple_delimiter}"ENHANCES"{tuple_delimiter}"Clear personal vision enhancing focused academic research and college planning"{tuple_delimiter}"goal clarity, academic motivation"{tuple_delimiter}0.8){record_delimiter}
+("relationship"{tuple_delimiter}"Future Orientation"{tuple_delimiter}"Executive Function"{tuple_delimiter}"ENHANCES"{tuple_delimiter}"Increased future motivation enhancing strategic planning and organizational behaviors"{tuple_delimiter}"motivation, cognitive planning"{tuple_delimiter}0.7){record_delimiter}
+("relationship"{tuple_delimiter}"Academic Engagement"{tuple_delimiter}"Academic Stress Management"{tuple_delimiter}"CAUSES"{tuple_delimiter}"Learning about competitive college requirements creating academic stress and performance anxiety"{tuple_delimiter}"academic pressure, emotional response"{tuple_delimiter}0.6){record_delimiter}
+("relationship"{tuple_delimiter}"Cultural Values Transmission"{tuple_delimiter}"Future Orientation"{tuple_delimiter}"ENHANCES"{tuple_delimiter}"Meaningful family cultural experience enhancing overall motivation and emotional engagement with future"{tuple_delimiter}"family support, emotional development"{tuple_delimiter}0.8){record_delimiter}
+("content_keywords"{tuple_delimiter}"family cultural influence, identity development, career exploration, academic planning, emotional development"){completion_delimiter}
 #############################""",
 ]
 
@@ -164,10 +232,11 @@ Format each entity as ("entity"{tuple_delimiter}<entity_name>{tuple_delimiter}<e
 For each pair of related entities, extract the following information:
 - source_entity: name of the source entity, as identified in step 1
 - target_entity: name of the target entity, as identified in step 1
+- relationship_type: one of the following types: [ENHANCES, SUPPORTS, ENABLES, CAUSES, INFLUENCES, INHIBITS, COMPETES, UNDERMINES, SYNERGIZES, CONSTRAINS, FACILITATES]
 - relationship_description: explanation as to why you think the source entity and the target entity are related to each other
 - relationship_strength: a numeric score indicating strength of the relationship between the source entity and target entity
 - relationship_keywords: one or more high-level key words that summarize the overarching nature of the relationship, focusing on concepts or themes rather than specific details
-Format each relationship as ("relationship"{tuple_delimiter}<source_entity>{tuple_delimiter}<target_entity>{tuple_delimiter}<relationship_description>{tuple_delimiter}<relationship_keywords>{tuple_delimiter}<relationship_strength>)
+Format each relationship as ("relationship"{tuple_delimiter}<source_entity>{tuple_delimiter}<target_entity>{tuple_delimiter}<relationship_type>{tuple_delimiter}<relationship_description>{tuple_delimiter}<relationship_keywords>{tuple_delimiter}<relationship_strength>)
 
 3. Identify high-level key words that summarize the main concepts, themes, or topics of the entire text. These should capture the overarching ideas present in the document.
 Format the content-level key words as ("content_keywords"{tuple_delimiter}<high_level_keywords>)

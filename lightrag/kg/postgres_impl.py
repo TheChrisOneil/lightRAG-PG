@@ -85,6 +85,7 @@ class PostgreSQLDB:
         - Silently ignores errors related to the graph already existing.
 
         """
+        logger.info(f"Configuring Apache AGE for graph '{graph_name}'")
         try:
             await connection.execute(  # type: ignore
                 'SET search_path = ag_catalog, "$user", public'
@@ -1152,6 +1153,7 @@ class PGGraphStorage(BaseGraphStorage):
         Returns:
             list[dict[str, Any]]: a list of dictionaries containing the result set
         """
+        logger.info(f"Executing query: {query}")
         try:
             if readonly:
                 data = await self.db.query(
