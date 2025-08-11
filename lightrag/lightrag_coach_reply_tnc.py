@@ -93,16 +93,32 @@ class CoachReply:
             prompt = param.prompt.lower()
             response_format =param.response_format.lower()
             mode = param.mode
-            reply_prompt = PROMPT_COACH[f"{role_assistant}_{prompt}_reply"].format(
-                history=formatted_history,
-                last_message=content,
-                kg_context="",
-                vector_context="",
-                intent=intent,
-                topic=topic,
-                sentiment=sentiment,
-                level=level,
-            )
+            
+            # Template formatting with error handling
+            template_key = f"{role_assistant}_{prompt}_reply"
+            template_vars = {
+                "history": formatted_history,
+                "last_message": content,
+                "kg_context": "",
+                "vector_context": "",
+                "retrieved_entities_relationships": "",
+                "intent": intent,
+                "topic": topic,
+                "sentiment": sentiment,
+                "level": level,
+            }
+            
+            try:
+                reply_prompt = PROMPT_COACH[template_key].format(**template_vars)
+            except KeyError as e:
+                missing_var = str(e).strip("'\"")
+                logger.error(f"Template formatting error for '{template_key}': Missing variable '{missing_var}'. Available variables: {list(template_vars.keys())}")
+                # Fallback to default template
+                reply_prompt = PROMPT_COACH["school_counselor_default_reply"].format(**template_vars)
+            except Exception as e:
+                logger.error(f"Unexpected error formatting template '{template_key}': {e}")
+                # Fallback to default template
+                reply_prompt = PROMPT_COACH["school_counselor_default_reply"].format(**template_vars)
             logger.debug(f" coach reply prompt: {reply_prompt}")    
             response = await self.rag.llm_model_func(reply_prompt)
             logger.debug(f"Captured coach reply: {response}")    
